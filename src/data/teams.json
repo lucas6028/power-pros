@@ -1,0 +1,938 @@
+[
+  {
+    "id": "brothers",
+    "name": "中信兄弟",
+    "nameEn": "CTBC Brothers",
+    "abbr": "兄",
+    "colors": { "primary": "#FFD300", "secondary": "#0B2240", "cap": "#0B2240" },
+    "lineup": [
+      "bro-wang-wc",
+      "bro-yue-dh",
+      "bro-jiang-ky",
+      "bro-hsu-ch",
+      "bro-chan-th",
+      "bro-chen-cs",
+      "bro-sung-sj",
+      "bro-kao-yc",
+      "bro-chang-ch"
+    ],
+    "pitchers": ["bro-cheng-hc", "bro-huang-es", "bro-lu-yc"],
+    "players": [
+      {
+        "id": "bro-wang-wc",
+        "name": "王威晨",
+        "nameEn": "Wang Wei-Chen",
+        "position": "3B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 7, "power": 3, "run": 7, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "bro-yue-dh",
+        "name": "岳東華",
+        "nameEn": "Yueh Tung-Hua",
+        "position": "2B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 4, "run": 6, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "bro-jiang-ky",
+        "name": "江坤宇",
+        "nameEn": "Chiang Kun-Yu",
+        "position": "SS",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 6, "power": 4, "run": 6, "arm": 6, "field": 8 }
+      },
+      {
+        "id": "bro-hsu-ch",
+        "name": "許基宏",
+        "nameEn": "Hsu Chi-Hung",
+        "position": "1B",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 4, "contact": 5, "power": 7, "run": 2, "arm": 4, "field": 5 }
+      },
+      {
+        "id": "bro-chan-th",
+        "name": "詹子賢",
+        "nameEn": "Chan Tzu-Hsien",
+        "position": "RF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 6, "power": 7, "run": 4, "arm": 6, "field": 5 }
+      },
+      {
+        "id": "bro-chen-cs",
+        "name": "陳俊秀",
+        "nameEn": "Chen Chun-Hsiu",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 6, "power": 6, "run": 2, "arm": 4, "field": 3 }
+      },
+      {
+        "id": "bro-sung-sj",
+        "name": "宋晟睿",
+        "nameEn": "Sung Sheng-Jui",
+        "position": "CF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 5, "run": 7, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "bro-kao-yc",
+        "name": "高宇杰",
+        "nameEn": "Kao Yu-Chieh",
+        "position": "C",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 2, "arm": 7, "field": 7 }
+      },
+      {
+        "id": "bro-chang-ch",
+        "name": "張志豪",
+        "nameEn": "Chang Chih-Hao",
+        "position": "LF",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 3, "contact": 4, "power": 6, "run": 6, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "bro-cheng-hc",
+        "name": "鄭浩均",
+        "nameEn": "Cheng Hao-Chun",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 6, "field": 4 },
+        "pitching": {
+          "velocity": 154,
+          "control": 5,
+          "stamina": 6,
+          "breakingBalls": [
+            { "type": "slider", "level": 5 },
+            { "type": "fork", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "bro-huang-es",
+        "name": "黃恩賜",
+        "nameEn": "Huang En-Sih",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 6, "field": 4 },
+        "pitching": {
+          "velocity": 151,
+          "control": 4,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "changeup", "level": 3 }
+          ]
+        }
+      },
+      {
+        "id": "bro-lu-yc",
+        "name": "呂彥青",
+        "nameEn": "Lu Yen-Ching",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 147,
+          "control": 5,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "curve", "level": 4 },
+            { "type": "changeup", "level": 4 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "lions",
+    "name": "統一獅",
+    "nameEn": "Uni-President 7-Eleven Lions",
+    "abbr": "獅",
+    "colors": { "primary": "#FF8200", "secondary": "#00543D", "cap": "#FF8200" },
+    "lineup": [
+      "lio-chen-cx",
+      "lio-lin-ck",
+      "lio-su-cc",
+      "lio-lin-ak",
+      "lio-chen-yj",
+      "lio-pan-ck",
+      "lio-lin-cw",
+      "lio-chen-cy",
+      "lio-chiu-cc"
+    ],
+    "pitchers": ["lio-hu-cw", "lio-lin-ce", "lio-cheng-cj"],
+    "players": [
+      {
+        "id": "lio-chen-cx",
+        "name": "陳傑憲",
+        "nameEn": "Chen Chieh-Hsien",
+        "position": "CF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 8, "power": 5, "run": 6, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "lio-lin-ck",
+        "name": "林靖凱",
+        "nameEn": "Lin Ching-Kai",
+        "position": "SS",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 3, "run": 7, "arm": 6, "field": 7 }
+      },
+      {
+        "id": "lio-su-cc",
+        "name": "蘇智傑",
+        "nameEn": "Su Chih-Chieh",
+        "position": "LF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 5, "power": 6, "run": 5, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "lio-lin-ak",
+        "name": "林安可",
+        "nameEn": "Lin An-Ko",
+        "position": "RF",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 4, "contact": 5, "power": 8, "run": 5, "arm": 6, "field": 5 }
+      },
+      {
+        "id": "lio-chen-yj",
+        "name": "陳鏞基",
+        "nameEn": "Chen Yung-Chi",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 6, "power": 5, "run": 2, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "lio-pan-ck",
+        "name": "潘傑楷",
+        "nameEn": "Pan Chieh-Kai",
+        "position": "3B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 4, "run": 5, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "lio-lin-cw",
+        "name": "林佳緯",
+        "nameEn": "Lin Chia-Wei",
+        "position": "2B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 3, "run": 6, "arm": 4, "field": 5 }
+      },
+      {
+        "id": "lio-chen-cy",
+        "name": "陳重羽",
+        "nameEn": "Chen Chung-Yu",
+        "position": "C",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 2, "arm": 6, "field": 6 }
+      },
+      {
+        "id": "lio-chiu-cc",
+        "name": "邱智呈",
+        "nameEn": "Chiu Chih-Cheng",
+        "position": "1B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 4, "run": 4, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "lio-hu-cw",
+        "name": "胡智爲",
+        "nameEn": "Hu Chih-Wei",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 6, "field": 4 },
+        "pitching": {
+          "velocity": 150,
+          "control": 6,
+          "stamina": 6,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "fork", "level": 5 }
+          ]
+        }
+      },
+      {
+        "id": "lio-lin-ce",
+        "name": "林詔恩",
+        "nameEn": "Lin Chao-En",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 148,
+          "control": 4,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "curve", "level": 3 }
+          ]
+        }
+      },
+      {
+        "id": "lio-cheng-cj",
+        "name": "鄭鈞仁",
+        "nameEn": "Cheng Chun-Jen",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 146,
+          "control": 5,
+          "stamina": 4,
+          "breakingBalls": [
+            { "type": "changeup", "level": 5 },
+            { "type": "curve", "level": 3 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "monkeys",
+    "name": "樂天桃猿",
+    "nameEn": "Rakuten Monkeys",
+    "abbr": "猿",
+    "colors": { "primary": "#870024", "secondary": "#C0A268", "cap": "#870024" },
+    "lineup": [
+      "mon-chen-cw",
+      "mon-lin-l",
+      "mon-liang-cr",
+      "mon-lin-hy",
+      "mon-chu-yh",
+      "mon-liao-cf",
+      "mon-cheng-c",
+      "mon-lin-tw",
+      "mon-yu-tl"
+    ],
+    "pitchers": ["mon-huang-tp", "mon-chen-ky", "mon-chuang-hy"],
+    "players": [
+      {
+        "id": "mon-chen-cw",
+        "name": "陳晨威",
+        "nameEn": "Chen Chen-Wei",
+        "position": "CF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 5, "run": 8, "arm": 6, "field": 6 }
+      },
+      {
+        "id": "mon-lin-l",
+        "name": "林立",
+        "nameEn": "Lin Li",
+        "position": "2B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 7, "power": 6, "run": 6, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "mon-liang-cr",
+        "name": "梁家榮",
+        "nameEn": "Liang Chia-Jung",
+        "position": "3B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 4, "run": 4, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "mon-lin-hy",
+        "name": "林泓育",
+        "nameEn": "Lin Hung-Yu",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 5, "power": 7, "run": 2, "arm": 4, "field": 3 }
+      },
+      {
+        "id": "mon-chu-yh",
+        "name": "朱育賢",
+        "nameEn": "Chu Yu-Hsien",
+        "position": "1B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 4, "contact": 5, "power": 7, "run": 2, "arm": 3, "field": 4 }
+      },
+      {
+        "id": "mon-liao-cf",
+        "name": "廖健富",
+        "nameEn": "Liao Chien-Fu",
+        "position": "C",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 6, "power": 5, "run": 3, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "mon-cheng-c",
+        "name": "成晉",
+        "nameEn": "Cheng Chin",
+        "position": "LF",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 6, "arm": 4, "field": 5 }
+      },
+      {
+        "id": "mon-lin-tw",
+        "name": "林子偉",
+        "nameEn": "Lin Tzu-Wei",
+        "position": "SS",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 3, "run": 7, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "mon-yu-tl",
+        "name": "余德龍",
+        "nameEn": "Yu Te-Lung",
+        "position": "RF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 4, "power": 2, "run": 5, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "mon-huang-tp",
+        "name": "黃子鵬",
+        "nameEn": "Huang Tzu-Peng",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 5 },
+        "pitching": {
+          "velocity": 145,
+          "control": 7,
+          "stamina": 6,
+          "breakingBalls": [
+            { "type": "sinker", "level": 5 },
+            { "type": "slider", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "mon-chen-ky",
+        "name": "陳冠宇",
+        "nameEn": "Chen Kuan-Yu",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 149,
+          "control": 5,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "fork", "level": 3 }
+          ]
+        }
+      },
+      {
+        "id": "mon-chuang-hy",
+        "name": "莊昕諺",
+        "nameEn": "Chuang Hsin-Yen",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 152,
+          "control": 4,
+          "stamina": 4,
+          "breakingBalls": [
+            { "type": "fork", "level": 5 },
+            { "type": "slider", "level": 3 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "guardians",
+    "name": "富邦悍將",
+    "nameEn": "Fubon Guardians",
+    "abbr": "悍",
+    "colors": { "primary": "#002D62", "secondary": "#6CA9DC", "cap": "#002D62" },
+    "lineup": [
+      "gua-shen-hw",
+      "gua-li-ch",
+      "gua-fan-kc",
+      "gua-kao-kl",
+      "gua-wang-nh",
+      "gua-tai-pf",
+      "gua-lin-cs",
+      "gua-wang-sw",
+      "gua-chou-tc"
+    ],
+    "pitchers": ["gua-chen-sp", "gua-chiang-kh", "gua-ou-sc"],
+    "players": [
+      {
+        "id": "gua-shen-hw",
+        "name": "申皓瑋",
+        "nameEn": "Shen Hao-Wei",
+        "position": "CF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 5, "power": 6, "run": 6, "arm": 6, "field": 6 }
+      },
+      {
+        "id": "gua-li-ch",
+        "name": "李宗賢",
+        "nameEn": "Li Tsung-Hsien",
+        "position": "SS",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 3, "run": 5, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "gua-fan-kc",
+        "name": "范國宸",
+        "nameEn": "Fan Kuo-Chen",
+        "position": "1B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 5, "power": 6, "run": 3, "arm": 4, "field": 5 }
+      },
+      {
+        "id": "gua-kao-kl",
+        "name": "高國麟",
+        "nameEn": "Kao Kuo-Lin",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 6, "run": 3, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "gua-wang-nh",
+        "name": "王念好",
+        "nameEn": "Wang Nien-Hao",
+        "position": "3B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 4, "run": 4, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "gua-tai-pf",
+        "name": "戴培峰",
+        "nameEn": "Tai Pei-Feng",
+        "position": "C",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 3, "arm": 6, "field": 6 }
+      },
+      {
+        "id": "gua-lin-cs",
+        "name": "林哲瑄",
+        "nameEn": "Lin Che-Hsuan",
+        "position": "RF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 5, "arm": 7, "field": 7 }
+      },
+      {
+        "id": "gua-wang-sw",
+        "name": "王勝偉",
+        "nameEn": "Wang Sheng-Wei",
+        "position": "2B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 4, "power": 2, "run": 5, "arm": 5, "field": 7 }
+      },
+      {
+        "id": "gua-chou-tc",
+        "name": "周佳樂",
+        "nameEn": "Chou Chia-Le",
+        "position": "LF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 5, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "gua-chen-sp",
+        "name": "陳仕朋",
+        "nameEn": "Chen Shih-Peng",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 5 },
+        "pitching": {
+          "velocity": 146,
+          "control": 6,
+          "stamina": 6,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "changeup", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "gua-chiang-kh",
+        "name": "江國豪",
+        "nameEn": "Chiang Kuo-Hao",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 147,
+          "control": 5,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "slider", "level": 3 },
+            { "type": "fork", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "gua-ou-sc",
+        "name": "歐書誠",
+        "nameEn": "Ou Shu-Cheng",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 150,
+          "control": 4,
+          "stamina": 4,
+          "breakingBalls": [
+            { "type": "curve", "level": 4 },
+            { "type": "slider", "level": 3 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragons",
+    "name": "味全龍",
+    "nameEn": "Wei Chuan Dragons",
+    "abbr": "龍",
+    "colors": { "primary": "#C8102E", "secondary": "#002569", "cap": "#C8102E" },
+    "lineup": [
+      "dra-li-kw",
+      "dra-kuo-ts",
+      "dra-giljegiljaw",
+      "dra-liu-ch",
+      "dra-chen-ss",
+      "dra-chang-cy",
+      "dra-chiang-sh",
+      "dra-tseng-tj",
+      "dra-namoh"
+    ],
+    "pitchers": ["dra-hsu-jh", "dra-lin-kw", "dra-chen-kw"],
+    "players": [
+      {
+        "id": "dra-li-kw",
+        "name": "李凱威",
+        "nameEn": "Li Kai-Wei",
+        "position": "2B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 7, "power": 3, "run": 7, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "dra-kuo-ts",
+        "name": "郭天信",
+        "nameEn": "Kuo Tien-Hsin",
+        "position": "CF",
+        "bats": "S",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 6, "power": 4, "run": 8, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "dra-giljegiljaw",
+        "name": "吉力吉撈．鞏冠",
+        "nameEn": "Giljegiljaw Kungkuan",
+        "position": "C",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 4, "contact": 5, "power": 8, "run": 3, "arm": 6, "field": 5 }
+      },
+      {
+        "id": "dra-liu-ch",
+        "name": "劉基鴻",
+        "nameEn": "Liu Chi-Hung",
+        "position": "3B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 5, "power": 6, "run": 4, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "dra-chen-ss",
+        "name": "陳思仲",
+        "nameEn": "Chen Sih-Chung",
+        "position": "1B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 5, "run": 3, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "dra-chang-cy",
+        "name": "張政禹",
+        "nameEn": "Chang Cheng-Yu",
+        "position": "SS",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 4, "power": 2, "run": 6, "arm": 5, "field": 7 }
+      },
+      {
+        "id": "dra-chiang-sh",
+        "name": "蔣少宏",
+        "nameEn": "Chiang Shao-Hung",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 3, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "dra-tseng-tj",
+        "name": "曾陶鎔",
+        "nameEn": "Tseng Tao-Jung",
+        "position": "LF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 5, "arm": 4, "field": 5 }
+      },
+      {
+        "id": "dra-namoh",
+        "name": "拿莫．伊漾",
+        "nameEn": "Namoh Iyang",
+        "position": "RF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 5, "run": 5, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "dra-hsu-jh",
+        "name": "徐若熙",
+        "nameEn": "Hsu Jo-Hsi",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 6, "field": 4 },
+        "pitching": {
+          "velocity": 157,
+          "control": 6,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "fork", "level": 6 },
+            { "type": "slider", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "dra-lin-kw",
+        "name": "林凱威",
+        "nameEn": "Lin Kai-Wei",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 150,
+          "control": 5,
+          "stamina": 6,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "changeup", "level": 4 }
+          ]
+        }
+      },
+      {
+        "id": "dra-chen-kw",
+        "name": "陳冠偉",
+        "nameEn": "Chen Kuan-Wei",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 152,
+          "control": 4,
+          "stamina": 4,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "curve", "level": 3 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "hawks",
+    "name": "台鋼雄鷹",
+    "nameEn": "TSG Hawks",
+    "abbr": "鷹",
+    "colors": { "primary": "#1B5E45", "secondary": "#B49759", "cap": "#1B5E45" },
+    "lineup": [
+      "haw-wang-pj",
+      "haw-wu-nt",
+      "haw-wei-cs",
+      "haw-chang-cy",
+      "haw-kuo-fl",
+      "haw-tseng-ty",
+      "haw-yen-yh",
+      "haw-chen-cc",
+      "haw-lin-cw"
+    ],
+    "pitchers": ["haw-wang-cl", "haw-chiu-cc", "haw-lin-yc"],
+    "players": [
+      {
+        "id": "haw-wang-pj",
+        "name": "王柏融",
+        "nameEn": "Wang Po-Jung",
+        "position": "LF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 7, "power": 6, "run": 5, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "haw-wu-nt",
+        "name": "吳念庭",
+        "nameEn": "Wu Nien-Ting",
+        "position": "2B",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 6, "power": 4, "run": 5, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "haw-wei-cs",
+        "name": "魏全",
+        "nameEn": "Wei Chuan",
+        "position": "DH",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 6, "run": 3, "arm": 4, "field": 3 }
+      },
+      {
+        "id": "haw-chang-cy",
+        "name": "張肇元",
+        "nameEn": "Chang Chao-Yuan",
+        "position": "C",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 5, "run": 2, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "haw-kuo-fl",
+        "name": "郭阜林",
+        "nameEn": "Kuo Fu-Lin",
+        "position": "3B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 3, "contact": 4, "power": 6, "run": 3, "arm": 5, "field": 4 }
+      },
+      {
+        "id": "haw-tseng-ty",
+        "name": "曾子祐",
+        "nameEn": "Tseng Tzu-Yu",
+        "position": "SS",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 5, "power": 3, "run": 6, "arm": 5, "field": 6 }
+      },
+      {
+        "id": "haw-yen-yh",
+        "name": "顏郁軒",
+        "nameEn": "Yen Yu-Hsuan",
+        "position": "1B",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 4, "run": 4, "arm": 4, "field": 4 }
+      },
+      {
+        "id": "haw-chen-cc",
+        "name": "陳致嘉",
+        "nameEn": "Chen Chih-Chia",
+        "position": "CF",
+        "bats": "L",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 3, "run": 7, "arm": 4, "field": 6 }
+      },
+      {
+        "id": "haw-lin-cw",
+        "name": "林家鋐",
+        "nameEn": "Lin Chia-Hung",
+        "position": "RF",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 2, "contact": 4, "power": 3, "run": 6, "arm": 5, "field": 5 }
+      },
+      {
+        "id": "haw-wang-cl",
+        "name": "王志煊",
+        "nameEn": "Wang Chih-Hsuan",
+        "position": "P",
+        "bats": "L",
+        "throws": "L",
+        "batting": { "trajectory": 1, "contact": 2, "power": 1, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 151,
+          "control": 4,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "slider", "level": 4 },
+            { "type": "changeup", "level": 3 }
+          ]
+        }
+      },
+      {
+        "id": "haw-chiu-cc",
+        "name": "邱辰",
+        "nameEn": "Chiu Chen",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 149,
+          "control": 5,
+          "stamina": 5,
+          "breakingBalls": [
+            { "type": "fork", "level": 4 },
+            { "type": "slider", "level": 3 }
+          ]
+        }
+      },
+      {
+        "id": "haw-lin-yc",
+        "name": "林維恩",
+        "nameEn": "Lin Wei-En",
+        "position": "P",
+        "bats": "R",
+        "throws": "R",
+        "batting": { "trajectory": 1, "contact": 2, "power": 2, "run": 3, "arm": 5, "field": 4 },
+        "pitching": {
+          "velocity": 148,
+          "control": 5,
+          "stamina": 4,
+          "breakingBalls": [
+            { "type": "curve", "level": 4 },
+            { "type": "changeup", "level": 3 }
+          ]
+        }
+      }
+    ]
+  }
+]
