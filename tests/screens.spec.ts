@@ -112,6 +112,21 @@ test("at least 5 seconds pass between pitches", async ({ page }) => {
   expect(gap).toBeGreaterThanOrEqual(5);
 });
 
+test("pitcher winds up before releasing the ball", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
+  await waitForScene(page, "game");
+
+  await waitForPhase(page, "windup");
+  await page.waitForTimeout(150); // arm on the way up / at the set position
+  await page.screenshot({ path: SHOT("09-windup") });
+
+  // the ball is released only after the motion completes
+  await waitForPhase(page, "flight");
+  const st = await getState(page);
+  expect(st.phase).toBe("flight");
+});
+
 test("batter can move the swing spot between pitches", async ({ page }) => {
   await boot(page);
   await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));

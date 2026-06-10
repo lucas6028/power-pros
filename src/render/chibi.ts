@@ -27,9 +27,8 @@ export function chibiFront(colors: ChibiColors): Container {
   g.ellipse(16, 64, 13, 9).fill(0xffffff).stroke(line());
   // body (jersey)
   g.roundRect(-26, 8, 52, 52, 14).fill(colors.jersey).stroke(line());
-  // arms
+  // glove arm
   g.circle(-33, 38, 10).fill(SKIN).stroke(line());
-  g.circle(33, 38, 10).fill(SKIN).stroke(line());
   // belt
   g.rect(-24, 52, 48, 8).fill(colors.trim);
 
@@ -60,6 +59,25 @@ export function chibiFront(colors: ChibiColors): Container {
   g.moveTo(-5, -4).quadraticCurveTo(0, 0, 5, -4).stroke(line(3));
 
   c.addChild(g);
+
+  // throwing arm: separate child (label "arm") pivoting at the shoulder so the
+  // game can animate the wind-up; at rest it matches the old hand position
+  const arm = new Container();
+  arm.label = "arm";
+  arm.position.set(24, 24); // shoulder
+  const armG = new Graphics();
+  armG.moveTo(0, 0).lineTo(11, 16).stroke({ width: 14, color: OUTLINE, cap: "round" });
+  armG.moveTo(0, 0).lineTo(11, 16).stroke({ width: 8, color: SKIN, cap: "round" });
+  armG.circle(11, 16, 10).fill(SKIN).stroke(line());
+  // baseball in hand, shown only during the wind-up (label "armBall")
+  const armBall = new Graphics();
+  armBall.label = "armBall";
+  armBall.circle(0, 0, 8).fill(0xffffff).stroke({ width: 3, color: OUTLINE });
+  armBall.position.set(17, 25);
+  armBall.visible = false;
+  arm.addChild(armG, armBall);
+  c.addChild(arm);
+
   return c;
 }
 

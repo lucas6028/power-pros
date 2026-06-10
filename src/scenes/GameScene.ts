@@ -42,7 +42,7 @@ export interface GameParams {
   seed?: number;
 }
 
-type Phase = "preparePitch" | "selectPitch" | "aim" | "flight" | "result";
+type Phase = "preparePitch" | "selectPitch" | "aim" | "windup" | "flight" | "result";
 
 const ZONE_CX = GAME_W / 2;
 const ZONE_CY = 408;
@@ -51,6 +51,8 @@ const RELEASE = { x: GAME_W / 2, y: 252 };
 const TICK = 1 / 60;
 /** Swing animation length in logic ticks. */
 const SWING_TICKS = 24;
+/** Pitching wind-up length in logic ticks: raise → hold → snap forward. */
+const WINDUP_TICKS = 48;
 /** Minimum pause after every pitch resolves before the next one (5 s at 60 Hz). */
 const RESULT_WAIT_TICKS = 300;
 
@@ -88,6 +90,9 @@ export class GameScene implements Scene {
   /** Ball positions of the most recent flight, one per logic tick (debug/tests). */
   private flightTrace: { x: number; y: number }[] = [];
   private pitchSeq = 0;
+  // wind-up
+  private windupTicks = 0;
+  private pendingPitch: PitchResult | null = null;
 
   // player pitching UI
   private pitchSel = 0;
@@ -101,6 +106,8 @@ export class GameScene implements Scene {
   private aimG!: Graphics;
   private zoneG!: Graphics;
   private pitcherC: Container | null = null;
+  private pitcherArm: Container | null = null;
+  private pitcherArmBall: Container | null = null;
   private batterC: Container | null = null;
   private batterBat: Graphics | null = null;
   private charLayer = new Container();
@@ -250,6 +257,9 @@ export class GameScene implements Scene {
     });
     this.pitcherC.scale.set(0.52);
     this.pitcherC.position.set(GAME_W / 2, 252);
+    this.pitcherC.rotation = 0;
+    this.pitcherArm = this.pitcherC.getChildByLabel("arm") as Container | null;
+    this.pitcherArmBall = (this.pitcherArm?.getChildByLabel("armBall") ?? null) as Container | null;
     this.charLayer.addChild(this.pitcherC);
 
     const batColors = this.battingTeam.colors;
@@ -341,6 +351,9 @@ export class GameScene implements Scene {
       case "aim":
         this.updateAim();
         break;
+      case "windup":
+        this.updateWindup();
+        break;
       case "flight":
         this.updateFlight();
         break;
@@ -349,6 +362,59 @@ export class GameScene implements Scene {
         break;
     }
     this.updateSwingAnimation();
+    // after the release, the pitcher eases back to the set position
+    if (this.phase !== "windup" && this.pitcherArm && this.pitcherC) {
+      this.pitcherArm.rotation *= 0.88;
+      this.pitcherC.rotation *= 0.88;
+      this.pitcherC.position.y += (RELEASE.y - this.pitcherC.position.y) * 0.15;
+      if (Math.abs(this.pitcherArm.rotation) < 0.02) this.pitcherArm.rotation = 0;
+      if (Math.abs(this.pitcherC.rotation) < 0.005) this.pitcherC.rotation = 0;
+    }
+  }
+
+  /** Start the pitching motion; the ball is released (startFlight) at its end. */
+  private beginWindup(pitch: PitchResult): void {
+    this.pendingPitch = pitch;
+    this.windupTicks = WINDUP_TICKS;
+    this.phase = "windup";
+    if (this.pitcherArmBall) this.pitcherArmBall.visible = true;
+  }
+
+  /** Raise the throwing arm overhead, hold, then snap forward and release. */
+  private updateWindup(): void {
+    if (this.playerIsBatting) this.updateBattingCursor();
+
+    this.windupTicks -= 1;
+    const t = 1 - this.windupTicks / WINDUP_TICKS;
+    let armRot: number;
+    let lean: number;
+    let crouch: number;
+    if (t < 0.45) {
+      const k = t / 0.45;
+      armRot = -2.4 * k;
+      lean = -0.07 * k;
+      crouch = 5 * k;
+    } else if (t < 0.7) {
+      armRot = -2.4; // set at the top
+      lean = -0.07;
+      crouch = 5;
+    } else {
+      const k = (t - 0.7) / 0.3;
+      armRot = -2.4 + 3.1 * k; // snap through to the follow-through
+      lean = -0.07 + 0.18 * k;
+      crouch = 5 - 9 * k; // push off the rubber
+    }
+    if (this.pitcherArm) this.pitcherArm.rotation = armRot;
+    if (this.pitcherC) {
+      this.pitcherC.rotation = lean;
+      this.pitcherC.position.y = RELEASE.y + crouch;
+    }
+
+    if (this.windupTicks <= 0) {
+      if (this.pitcherArmBall) this.pitcherArmBall.visible = false;
+      this.startFlight(this.pendingPitch!);
+      this.pendingPitch = null;
+    }
   }
 
   /** Bat swing: cock back, sweep through the zone, hold the follow-through. */
@@ -401,7 +467,7 @@ export class GameScene implements Scene {
     if (this.playerIsBatting) {
       // CPU throws after a beat
       this.intent = cpuSelectPitch(this.pitcher, this.state.balls, this.state.strikes, this.rng);
-      this.startFlight(throwPitch(this.pitcher, this.intent, this.rng));
+      this.beginWindup(throwPitch(this.pitcher, this.intent, this.rng));
     } else {
       this.pitchSel = 0;
       this.buildPitchList();
@@ -480,7 +546,7 @@ export class GameScene implements Scene {
         this.state.strikes,
         this.rng,
       );
-      this.startFlight(pitch);
+      this.beginWindup(pitch);
     }
   }
 
