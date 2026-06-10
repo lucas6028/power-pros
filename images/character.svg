@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 500" width="420" height="500">
+  <defs>
+    <clipPath id="shoeL"><ellipse cx="148" cy="448" rx="58" ry="24"/></clipPath>
+    <clipPath id="shoeR"><ellipse cx="272" cy="448" rx="58" ry="24"/></clipPath>
+    <clipPath id="crown">
+      <path d="M 88 200 Q 92 78 210 72 Q 328 78 332 200 Q 272 176 210 176 Q 148 176 88 200 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- ground shadow -->
+  <ellipse cx="210" cy="466" rx="155" ry="14" fill="#000" opacity="0.08"/>
+
+  <!-- shoes -->
+  <g stroke="#4a3528" stroke-width="5">
+    <ellipse cx="148" cy="448" rx="58" ry="24" fill="#ffffff"/>
+    <ellipse cx="272" cy="448" rx="58" ry="24" fill="#ffffff"/>
+  </g>
+  <ellipse cx="112" cy="450" rx="36" ry="22" fill="#e23a3a" clip-path="url(#shoeL)"/>
+  <ellipse cx="308" cy="450" rx="36" ry="22" fill="#e23a3a" clip-path="url(#shoeR)"/>
+  <g fill="none" stroke="#4a3528" stroke-width="5">
+    <ellipse cx="148" cy="448" rx="58" ry="24"/>
+    <ellipse cx="272" cy="448" rx="58" ry="24"/>
+  </g>
+
+  <!-- torso -->
+  <path d="M 140 290 Q 132 360 142 412 Q 144 424 158 424 L 262 424 Q 276 424 278 412 Q 288 360 280 290 Q 210 312 140 290 Z"
+        fill="#e23a3a" stroke="#4a3528" stroke-width="6"/>
+  <!-- chest panel -->
+  <rect x="173" y="316" width="74" height="66" rx="12" fill="#ffffff" stroke="#4a3528" stroke-width="5"/>
+  <text x="210" y="366" text-anchor="middle" font-family="Arial Black, Arial, sans-serif"
+        font-size="44" font-weight="900" fill="#e23a3a">P</text>
+  <!-- belt -->
+  <path d="M 141 396 Q 210 408 279 396 L 277 414 Q 276 424 262 424 L 158 424 Q 144 424 143 414 Z"
+        fill="#b02525" stroke="#4a3528" stroke-width="5"/>
+
+  <!-- fists -->
+  <circle cx="116" cy="382" r="23" fill="#ffd9a0" stroke="#4a3528" stroke-width="6"/>
+  <circle cx="304" cy="382" r="23" fill="#ffd9a0" stroke="#4a3528" stroke-width="6"/>
+
+  <!-- head -->
+  <ellipse cx="210" cy="205" rx="126" ry="112" fill="#ffd9a0" stroke="#4a3528" stroke-width="6"/>
+
+  <!-- cap brim (red band peeking under crown) -->
+  <ellipse cx="210" cy="201" rx="143" ry="30" fill="#e23a3a" stroke="#4a3528" stroke-width="6"/>
+
+  <!-- cap crown -->
+  <path d="M 88 200 Q 92 78 210 72 Q 328 78 332 200 Q 272 176 210 176 Q 148 176 88 200 Z"
+        fill="#ffffff" stroke="#4a3528" stroke-width="6"/>
+  <!-- crown seams -->
+  <g stroke="#e8d9c4" stroke-width="4" fill="none" clip-path="url(#crown)">
+    <path d="M 150 80 Q 142 130 146 188"/>
+    <path d="M 270 80 Q 278 130 274 188"/>
+  </g>
+  <!-- cap letter + button -->
+  <text x="210" y="158" text-anchor="middle" font-family="Arial Black, Arial, sans-serif"
+        font-size="58" font-weight="900" fill="#e23a3a">P</text>
+  <circle cx="210" cy="74" r="9" fill="#e23a3a" stroke="#4a3528" stroke-width="4"/>
+
+  <!-- eyes -->
+  <g stroke="#4a3528" stroke-width="5">
+    <ellipse cx="172" cy="248" rx="18" ry="29" fill="#ffffff"/>
+    <ellipse cx="248" cy="248" rx="18" ry="29" fill="#ffffff"/>
+  </g>
+  <ellipse cx="172" cy="252" rx="9.5" ry="17" fill="#7b5bd6"/>
+  <ellipse cx="248" cy="252" rx="9.5" ry="17" fill="#7b5bd6"/>
+  <ellipse cx="172" cy="258" rx="5" ry="9" fill="#2c1f4a"/>
+  <ellipse cx="248" cy="258" rx="5" ry="9" fill="#2c1f4a"/>
+  <circle cx="169" cy="244" r="3.5" fill="#ffffff"/>
+  <circle cx="245" cy="244" r="3.5" fill="#ffffff"/>
+
+  <!-- blush -->
+  <ellipse cx="120" cy="270" rx="14" ry="8" fill="#f7b27a" opacity="0.7"/>
+  <ellipse cx="300" cy="270" rx="14" ry="8" fill="#f7b27a" opacity="0.7"/>
+</svg>
