@@ -30,6 +30,22 @@ export function pitchSpeedKmh(pitcher: Player, pitchType: PitchTypeId): number {
   return Math.round(velo * BREAK_OFFSETS[pitchType].speed);
 }
 
+/** How far a pitch breaks on its way to the plate, in strike-zone units.
+ * Fastballs fly true; breaking balls bend by type, scaled by the pitcher's
+ * level for that pitch and mirrored for left-handed throwers. The renderer
+ * uses this to draw the trajectory (break arrives late in the flight). */
+export function pitchBreakVector(
+  pitcher: Player,
+  pitchType: PitchTypeId,
+): { dx: number; dy: number } {
+  if (pitchType === "fastball") return { dx: 0, dy: 0 };
+  const off = BREAK_OFFSETS[pitchType];
+  const level = pitcher.pitching?.breakingBalls.find((b) => b.type === pitchType)?.level ?? 3;
+  const s = 0.5 + level * 0.18;
+  const mirror = pitcher.throws === "L" ? -1 : 1;
+  return { dx: off.dx * s * mirror, dy: off.dy * s };
+}
+
 /** Execute a pitch: intended target plus control-based scatter. */
 export function throwPitch(pitcher: Player, intent: PitchIntent, rng: Rng): PitchResult {
   const p = pitcher.pitching;

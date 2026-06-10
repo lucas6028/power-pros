@@ -29,6 +29,7 @@ import {
   resolvePitch,
   cursorRadius,
   pitchSpeedKmh,
+  pitchBreakVector,
   type PitchIntent,
 } from "../game/sim/atbat";
 import { batterAt, currentPitcher } from "../game/sim/autoplay";
@@ -82,6 +83,11 @@ export class GameScene implements Scene {
   private swing: SwingAttempt | null = null;
   private swung = false;
   private lastPlay: PlayEvent | null = null;
+  /** Screen-space break of the pitch in flight (drawn arriving late). */
+  private breakScreen = { x: 0, y: 0 };
+  /** Ball positions of the most recent flight, one per logic tick (debug/tests). */
+  private flightTrace: { x: number; y: number }[] = [];
+  private pitchSeq = 0;
 
   // player pitching UI
   private pitchSel = 0;
@@ -261,6 +267,7 @@ export class GameScene implements Scene {
     this.batterC.rotation = 0;
     this.batterBat = this.batterC.getChildByLabel("bat") as Graphics | null;
     this.swingTicks = 0;
+    this.cursor = { x: 0, y: 0 }; // new batter starts with a centered cursor
     this.charLayer.addChild(this.batterC);
     this.currentBatterId = this.batter.id;
   }
@@ -382,8 +389,10 @@ export class GameScene implements Scene {
     this.swing = null;
     this.swung = false;
     this.pitch = null;
-    this.cursor = { x: 0, y: 0 };
     this.aim = { x: 0, y: 0 };
+
+    // the batter can set up the swing spot before the pitch
+    if (this.playerIsBatting) this.updateBattingCursor();
 
     if (this.timer > 0) {
       this.timer -= 1;
@@ -479,6 +488,10 @@ export class GameScene implements Scene {
     this.pitch = pitch;
     this.flightT = 0;
     this.flightTime = 1.05 - pitch.speed * 0.45;
+    const brk = pitchBreakVector(this.pitcher, pitch.pitchType);
+    this.breakScreen = { x: brk.dx * ZONE_SCALE, y: -brk.dy * ZONE_SCALE };
+    this.flightTrace = [];
+    this.pitchSeq += 1;
     this.phase = "flight";
     this.ball.visible = true;
     this.ball.position.set(RELEASE.x, RELEASE.y);
@@ -486,18 +499,31 @@ export class GameScene implements Scene {
     this.speedText.text = `${pitchSpeedKmh(this.pitcher, pitch.pitchType)} ${t("kmh")}`;
   }
 
+  /** Move and draw the batting cursor; active whenever the player's side is at
+   * the plate — including the wait between pitches, so the spot can be set early. */
+  private updateBattingCursor(): void {
+    const inp = this.ctx.input;
+    const sp = 0.055;
+    if (inp.isDown("ArrowLeft")) this.cursor.x -= sp;
+    if (inp.isDown("ArrowRight")) this.cursor.x += sp;
+    if (inp.isDown("ArrowUp")) this.cursor.y += sp;
+    if (inp.isDown("ArrowDown")) this.cursor.y -= sp;
+    this.cursor.x = Math.max(-1.5, Math.min(1.5, this.cursor.x));
+    this.cursor.y = Math.max(-1.5, Math.min(1.5, this.cursor.y));
+
+    const c = this.zoneToScreen(this.cursor.x, this.cursor.y);
+    const r = cursorRadius(this.batter) * ZONE_SCALE * 0.78;
+    this.cursorG.clear();
+    this.cursorG.ellipse(c.x, c.y, r, r * 0.72).fill({ color: 0x4da6ff, alpha: 0.35 });
+    this.cursorG.ellipse(c.x, c.y, r, r * 0.72).stroke({ width: 3, color: 0x4da6ff });
+  }
+
   private updateFlight(): void {
     const inp = this.ctx.input;
     const pitch = this.pitch!;
 
     if (this.playerIsBatting) {
-      const sp = 0.055;
-      if (inp.isDown("ArrowLeft")) this.cursor.x -= sp;
-      if (inp.isDown("ArrowRight")) this.cursor.x += sp;
-      if (inp.isDown("ArrowUp")) this.cursor.y += sp;
-      if (inp.isDown("ArrowDown")) this.cursor.y -= sp;
-      this.cursor.x = Math.max(-1.5, Math.min(1.5, this.cursor.x));
-      this.cursor.y = Math.max(-1.5, Math.min(1.5, this.cursor.y));
+      this.updateBattingCursor();
 
       if (!this.swung && inp.justPressed("Space")) {
         this.swung = true;
@@ -509,24 +535,22 @@ export class GameScene implements Scene {
           timing: this.flightT - this.flightTime,
         };
       }
-
-      const c = this.zoneToScreen(this.cursor.x, this.cursor.y);
-      const r = cursorRadius(this.batter) * ZONE_SCALE * 0.78;
-      this.cursorG.clear();
-      this.cursorG.ellipse(c.x, c.y, r, r * 0.72).fill({ color: 0x4da6ff, alpha: 0.35 });
-      this.cursorG.ellipse(c.x, c.y, r, r * 0.72).stroke({ width: 3, color: 0x4da6ff });
     }
 
     this.flightT += TICK;
     const k = Math.min(1, this.flightT / this.flightTime);
-    // lateral break arrives late (k²), drop builds gradually
-    const drift = k * k;
     const start = RELEASE;
     const end = this.zoneToScreen(pitch.x, pitch.y);
-    const bx = start.x + (end.x - start.x) * (k * 0.55 + drift * 0.45);
-    const by = start.y + (end.y - start.y) * (k * 0.8 + drift * 0.2);
+    // the ball travels straight toward where it would cross without movement,
+    // and the break bends it onto the real location late (k²); fastballs have
+    // zero break and fly true
+    const brk = this.breakScreen;
+    const late = k * k;
+    const bx = start.x + (end.x - brk.x - start.x) * k + brk.x * late;
+    const by = start.y + (end.y - brk.y - start.y) * k + brk.y * late;
     this.ball.position.set(bx, by);
     this.ball.scale.set(0.45 + k * 0.75);
+    this.flightTrace.push({ x: bx, y: by });
 
     // CPU batter starts its swing as the ball arrives
     if (!this.playerIsBatting && this.swing && this.swingTicks === 0 && k >= 0.8) {
@@ -596,6 +620,8 @@ export class GameScene implements Scene {
       this.timer -= 1;
       // the ball rests at the plate briefly, then disappears for the rest of the wait
       if (this.ball.visible && this.timer < RESULT_WAIT_TICKS - 45) this.ball.visible = false;
+      // keep the swing spot adjustable through the between-pitch wait
+      if (this.playerIsBatting) this.updateBattingCursor();
       return;
     }
     if (this.state.gameOver) {
@@ -624,6 +650,13 @@ export class GameScene implements Scene {
       batter: this.batter.name,
       pitcher: this.pitcher.name,
       playerIsBatting: this.playerIsBatting,
+      cursorX: this.cursor.x,
+      cursorY: this.cursor.y,
+      pitchType: this.pitch?.pitchType ?? null,
+      ballX: this.ball.visible ? this.ball.position.x : null,
+      ballY: this.ball.visible ? this.ball.position.y : null,
+      pitchSeq: this.pitchSeq,
+      flightTrace: [...this.flightTrace],
       gameOver: this.state.gameOver,
       lastPlay: this.lastPlay,
     };

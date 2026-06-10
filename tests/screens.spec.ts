@@ -112,6 +112,24 @@ test("at least 5 seconds pass between pitches", async ({ page }) => {
   expect(gap).toBeGreaterThanOrEqual(5);
 });
 
+test("batter can move the swing spot between pitches", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
+  await waitForScene(page, "game");
+
+  // take the first pitch, then adjust the cursor during the between-pitch wait
+  await waitForPhase(page, "flight");
+  await waitForPhase(page, "result");
+  const before = await getState(page);
+  await page.evaluate(() => window.__game!.hold("ArrowLeft"));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => window.__game!.release("ArrowLeft"));
+  const after = await getState(page);
+  expect(after.phase).toBe("result");
+  expect(after.cursorX as number).toBeLessThan(before.cursorX as number);
+  await page.screenshot({ path: SHOT("08-cursor-preset") });
+});
+
 test("swing animation plays when the batter swings", async ({ page }) => {
   await boot(page);
   await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
