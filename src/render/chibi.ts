@@ -77,13 +77,21 @@ export function chibiBatterBack(colors: ChibiColors, batsLeft: boolean): Contain
   // number plate on back
   g.roundRect(-14, 18, 28, 30, 8).fill(0xffffff).stroke(line(3));
 
-  // bat (angled up behind shoulder)
-  g.moveTo(34 * flip, 6)
-    .lineTo(80 * flip, -98)
+  // bat: its own child (label "bat") pivoting at the hands so the game can
+  // animate the swing by rotating it
+  const bat = new Graphics();
+  bat.label = "bat";
+  bat
+    .moveTo(0, 0)
+    .lineTo(46 * flip, -104)
     .stroke({ width: 18, color: OUTLINE, cap: "round" });
-  g.moveTo(34 * flip, 6)
-    .lineTo(80 * flip, -98)
+  bat
+    .moveTo(0, 0)
+    .lineTo(46 * flip, -104)
     .stroke({ width: 12, color: 0xd9a05b, cap: "round" });
+  bat.position.set(36 * flip, 2);
+  c.addChild(bat); // added before the body so the sweep passes behind the batter
+
   // hands gripping
   g.circle(36 * flip, 2, 10)
     .fill(SKIN)

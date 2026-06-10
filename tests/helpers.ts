@@ -51,6 +51,7 @@ declare global {
       hold(code: string): void;
       release(code: string): void;
       newGame(awayId: string, homeId: string, seed?: number): void;
+      setTimeScale(scale: number): void;
     };
   }
 }

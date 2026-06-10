@@ -41,14 +41,17 @@ async function boot(): Promise<void> {
   scenes.register(new ResultScene());
   scenes.goTo("title");
 
+  let timeScale = 1;
   if (import.meta.env.DEV) {
-    installDebugApi(scenes, input);
+    installDebugApi(scenes, input, (s) => {
+      timeScale = s;
+    });
   }
 
   // fixed-timestep logic at 60 Hz; input timing is gameplay-critical
   let accumulator = 0;
   app.ticker.add((ticker) => {
-    accumulator += Math.min(ticker.deltaMS / 1000, MAX_FRAME);
+    accumulator += Math.min(ticker.deltaMS / 1000, MAX_FRAME) * timeScale;
     while (accumulator >= LOGIC_DT) {
       input.beginTick();
       scenes.update(LOGIC_DT);

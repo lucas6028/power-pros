@@ -48,6 +48,10 @@ const ZONE_CY = 408;
 const ZONE_SCALE = 72; // pixels per strike-zone unit
 const RELEASE = { x: GAME_W / 2, y: 252 };
 const TICK = 1 / 60;
+/** Swing animation length in logic ticks. */
+const SWING_TICKS = 24;
+/** Minimum pause after every pitch resolves before the next one (5 s at 60 Hz). */
+const RESULT_WAIT_TICKS = 300;
 
 const PITCH_NAMES: Record<PitchTypeId, string> = {
   fastball: "直球",
@@ -92,6 +96,7 @@ export class GameScene implements Scene {
   private zoneG!: Graphics;
   private pitcherC: Container | null = null;
   private batterC: Container | null = null;
+  private batterBat: Graphics | null = null;
   private charLayer = new Container();
   private msg!: ReturnType<typeof makeText>;
   private speedText!: ReturnType<typeof makeText>;
@@ -103,6 +108,7 @@ export class GameScene implements Scene {
   private hintText!: ReturnType<typeof makeText>;
   private batterText!: ReturnType<typeof makeText>;
   private swingTicks = 0;
+  private swingDir = 1;
   private currentBatterId = "";
   private countLabels: ReturnType<typeof makeText>[] = [];
 
@@ -253,6 +259,8 @@ export class GameScene implements Scene {
     this.batterC.scale.set(0.95);
     this.batterC.position.set(GAME_W / 2 + (batsLeft ? 150 : -150), GAME_H - 70);
     this.batterC.rotation = 0;
+    this.batterBat = this.batterC.getChildByLabel("bat") as Graphics | null;
+    this.swingTicks = 0;
     this.charLayer.addChild(this.batterC);
     this.currentBatterId = this.batter.id;
   }
@@ -333,11 +341,36 @@ export class GameScene implements Scene {
         this.updateResult();
         break;
     }
-    if (this.swingTicks > 0 && this.batterC) {
-      this.swingTicks -= 1;
-      const k = this.swingTicks / 12;
-      this.batterC.rotation =
-        (this.batter.bats === "L" ? 1 : -1) * Math.sin((1 - k) * Math.PI) * 0.9;
+    this.updateSwingAnimation();
+  }
+
+  /** Bat swing: cock back, sweep through the zone, hold the follow-through. */
+  private updateSwingAnimation(): void {
+    if (this.swingTicks <= 0 || !this.batterC) return;
+    this.swingTicks -= 1;
+    const t = 1 - this.swingTicks / SWING_TICKS;
+    const dir = this.swingDir;
+
+    let batAngle: number;
+    let lean: number;
+    if (t < 0.15) {
+      const k = t / 0.15;
+      batAngle = k * 0.4; // cock back
+      lean = k * 0.06;
+    } else if (t < 0.45) {
+      const k = (t - 0.15) / 0.3;
+      batAngle = 0.4 - k * 2.7; // sweep across the plate
+      lean = 0.06 - k * 0.22;
+    } else {
+      batAngle = -2.3; // follow-through
+      lean = -0.16;
+    }
+    if (this.batterBat) this.batterBat.rotation = dir * batAngle;
+    this.batterC.rotation = dir * lean;
+
+    if (this.swingTicks === 0) {
+      if (this.batterBat) this.batterBat.rotation = 0;
+      this.batterC.rotation = 0;
     }
   }
 
@@ -468,7 +501,8 @@ export class GameScene implements Scene {
 
       if (!this.swung && inp.justPressed("Space")) {
         this.swung = true;
-        this.swingTicks = 12;
+        this.swingTicks = SWING_TICKS;
+        this.swingDir = this.batter.bats === "L" ? -1 : 1;
         this.swing = {
           x: this.cursor.x,
           y: this.cursor.y,
@@ -494,9 +528,13 @@ export class GameScene implements Scene {
     this.ball.position.set(bx, by);
     this.ball.scale.set(0.45 + k * 0.75);
 
+    // CPU batter starts its swing as the ball arrives
+    if (!this.playerIsBatting && this.swing && this.swingTicks === 0 && k >= 0.8) {
+      this.swingTicks = SWING_TICKS;
+      this.swingDir = this.batter.bats === "L" ? -1 : 1;
+    }
+
     if (k >= 1) {
-      // CPU batter swing animation
-      if (!this.playerIsBatting && this.swing) this.swingTicks = 12;
       this.resolveCurrentPitch();
     }
   }
@@ -522,7 +560,7 @@ export class GameScene implements Scene {
     this.msg.text = text;
     this.refreshHud();
     this.phase = "result";
-    this.timer = play ? 80 : 45;
+    this.timer = RESULT_WAIT_TICKS;
   }
 
   private playText(play: PlayEvent): string {
@@ -556,7 +594,8 @@ export class GameScene implements Scene {
   private updateResult(): void {
     if (this.timer > 0) {
       this.timer -= 1;
-      if (this.ball.visible && this.timer < 30) this.ball.visible = false;
+      // the ball rests at the plate briefly, then disappears for the rest of the wait
+      if (this.ball.visible && this.timer < RESULT_WAIT_TICKS - 45) this.ball.visible = false;
       return;
     }
     if (this.state.gameOver) {

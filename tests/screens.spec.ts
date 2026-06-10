@@ -65,6 +65,8 @@ test("scripted play: swing at pitches and pitch to the CPU for two half-innings"
   await boot(page);
   await page.evaluate(() => window.__game!.newGame("lions", "hawks", 7));
   await waitForScene(page, "game");
+  // skip through the 5 s between-pitch waits
+  await page.evaluate(() => window.__game!.setTimeScale(6));
 
   let sawPlayerPitching = false;
   let tookScreenshot = false;
@@ -97,4 +99,31 @@ test("scripted play: swing at pitches and pitch to the CPU for two half-innings"
   expect((st.outs as number) >= 0 && (st.outs as number) < 3).toBe(true);
   expect(sawPlayerPitching || (st.half === "top" && (st.inning as number) === 1)).toBe(true);
   await page.screenshot({ path: SHOT("06-game-playthrough-end") });
+});
+
+test("at least 5 seconds pass between pitches", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
+  await waitForPhase(page, "flight");
+  await waitForPhase(page, "result");
+  const t0 = Date.now();
+  await waitForPhase(page, "flight"); // next pitch leaves the hand
+  const gap = (Date.now() - t0) / 1000;
+  expect(gap).toBeGreaterThanOrEqual(5);
+});
+
+test("swing animation plays when the batter swings", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
+  await waitForScene(page, "game");
+
+  await waitForPhase(page, "flight");
+  await press(page, "Space"); // swing!
+  await page.waitForTimeout(130); // mid-sweep of the 0.4 s animation
+  await page.screenshot({ path: SHOT("07-swing-animation") });
+
+  // the swing either connected (PA over) or registered a strike/foul
+  await waitForPhase(page, "result");
+  const st = await getState(page);
+  expect(st.scene).toBe("game");
 });

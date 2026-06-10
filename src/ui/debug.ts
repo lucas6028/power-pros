@@ -13,6 +13,8 @@ export interface DebugApi {
   release(code: string): void;
   /** Jump straight into a game with a fixed seed (deterministic for tests). */
   newGame(awayId: string, homeId: string, seed?: number): void;
+  /** Speed up the logic clock (1–10×) so scripted tests can skip waits. */
+  setTimeScale(scale: number): void;
 }
 
 declare global {
@@ -21,7 +23,11 @@ declare global {
   }
 }
 
-export function installDebugApi(scenes: SceneManager, input: Input): void {
+export function installDebugApi(
+  scenes: SceneManager,
+  input: Input,
+  setTimeScale: (scale: number) => void,
+): void {
   window.__game = {
     scene: () => scenes.currentName,
     getState: () => ({
@@ -33,5 +39,6 @@ export function installDebugApi(scenes: SceneManager, input: Input): void {
     release: (code) => input.release(code),
     newGame: (awayId, homeId, seed = 12345) =>
       scenes.goTo("game", { awayId, homeId, playerTeam: 0, seed }),
+    setTimeScale: (scale) => setTimeScale(Math.max(1, Math.min(10, scale))),
   };
 }
