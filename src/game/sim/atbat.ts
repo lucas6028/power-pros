@@ -83,12 +83,7 @@ export function resolvePitch(
 
 /** Turn contact quality into a batted-ball result. Tuned for arcade baseball shape:
  * league ~.270 AVG, ~12% HR-per-hit, lots of singles. */
-function battedBall(
-  batter: Player,
-  quality: number,
-  timing: number,
-  rng: Rng,
-): InPlayResult {
+function battedBall(batter: Player, quality: number, timing: number, rng: Rng): InPlayResult {
   const power = batter.batting.power; // 1..8
   const traj = batter.batting.trajectory; // 1..4
 

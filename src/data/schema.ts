@@ -57,13 +57,19 @@ const team = z
     }
     for (const id of [...t.lineup, ...t.pitchers]) {
       if (!ids.has(id)) {
-        ctx.addIssue({ code: "custom", message: `${t.id}: lineup/pitcher id "${id}" not in players` });
+        ctx.addIssue({
+          code: "custom",
+          message: `${t.id}: lineup/pitcher id "${id}" not in players`,
+        });
       }
     }
     for (const pid of t.pitchers) {
       const p = t.players.find((pl) => pl.id === pid);
       if (p && !p.pitching) {
-        ctx.addIssue({ code: "custom", message: `${t.id}: pitcher "${pid}" has no pitching stats` });
+        ctx.addIssue({
+          code: "custom",
+          message: `${t.id}: pitcher "${pid}" has no pitching stats`,
+        });
       }
     }
   });

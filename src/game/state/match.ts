@@ -223,7 +223,7 @@ export function applyPitch(s: MatchState, ev: PitchEvent): PlayEvent | null {
     case "inPlay": {
       resetCount(s);
       advanceBatter(s);
-      let runs = 0;
+      let runs: number;
       if (ev.result.type === "out") {
         runs = applyOut(s, ev.result, batterIdx);
       } else {
@@ -244,7 +244,7 @@ function walkAdvance(
 ): { bases: [number | null, number | null, number | null]; runs: number } {
   const [r1, r2, r3] = bases;
   let runs = 0;
-  let n1: number | null = batterIdx;
+  const n1: number | null = batterIdx;
   let n2: number | null = r2;
   let n3: number | null = r3;
   if (r1 !== null) {
