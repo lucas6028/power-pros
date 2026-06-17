@@ -34,28 +34,6 @@ function outlined(geo: THREE.BufferGeometry, color: number, outline = 1.09): THR
   return grp;
 }
 
-/** Legs + torso shared by both poses. */
-function lowerBody(colors: ChibiColors): THREE.Group {
-  const g = new THREE.Group();
-
-  for (const sx of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.36, 16), toon(PANTS));
-    leg.position.set(sx * 0.16, 0.18, 0);
-    g.add(leg);
-  }
-
-  const torso = outlined(new THREE.BoxGeometry(0.64, 0.58, 0.38), colors.jersey);
-  torso.position.set(0, 0.66, 0);
-  g.add(torso);
-
-  // belt
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.1, 0.4), toon(colors.trim));
-  belt.position.set(0, 0.4, 0);
-  g.add(belt);
-
-  return g;
-}
-
 /** Head with cap; `facing` is +1 to face +Z (camera) or −1 to face −Z (pitcher).
  * `helmet` draws a fuller batting helmet instead of a ball cap. */
 function headWithCap(colors: ChibiColors, facing: 1 | -1, helmet: boolean): THREE.Group {
@@ -125,14 +103,15 @@ function headWithCap(colors: ChibiColors, facing: 1 | -1, helmet: boolean): THRE
   return g;
 }
 
-/** Hip height of the pitcher rig: legs pivot here and the upper body pivots here
- * so the GameScene can drive a real pitching delivery (leg lift, stride, trunk
- * rotation, arm whip). */
-const PITCHER_HIP_Y = 0.42;
+/** Hip height of both rigs: the legs pivot here and the upper body pivots here so
+ * the GameScene can drive a real delivery / swing (leg lift, stride, trunk
+ * rotation, arm whip or bat sweep). */
+const HIP_Y = 0.42;
 
-/** One pitcher leg: a thigh on a hip pivot and a shin/foot on a knee pivot. The
- * returned shin group is named so the knee can be bent independently. */
-function pitcherLeg(shinName: string): THREE.Group {
+/** One jointed leg: a thigh on a hip pivot and a shin/foot on a knee pivot. The
+ * returned shin group is named so the knee can be bent independently. Shared by
+ * the pitcher (delivery) and the batter (stride / leg lift). */
+function jointedLeg(shinName: string): THREE.Group {
   const leg = new THREE.Group(); // pivot at the hip
   const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.18, 6, 12), toon(PANTS));
   thigh.position.y = -0.12;
@@ -158,15 +137,15 @@ function pitcherLeg(shinName: string): THREE.Group {
  * throwing arm at the shoulder) holding "armBall" (hidden by default). */
 export function makeChibiPitcher(colors: ChibiColors): THREE.Group {
   const g = new THREE.Group();
-  const hip = PITCHER_HIP_Y;
+  const hip = HIP_Y;
 
   // legs (hip pivots), planted at rest
-  const backLeg = pitcherLeg("backShin");
+  const backLeg = jointedLeg("backShin");
   backLeg.name = "backLeg";
   backLeg.position.set(-0.17, hip, -0.04);
   g.add(backLeg);
 
-  const frontLeg = pitcherLeg("frontShin");
+  const frontLeg = jointedLeg("frontShin");
   frontLeg.name = "frontLeg";
   frontLeg.position.set(0.17, hip, 0.04);
   g.add(frontLeg);
@@ -214,36 +193,78 @@ export function makeChibiPitcher(colors: ChibiColors): THREE.Group {
   return g;
 }
 
+/** A bold, clearly readable bat: dark handle + knob and a light wood barrel with
+ * an inverted-hull outline. Pivot is at the hands (y = 0); the barrel points up.
+ * Rest pose cocks it up and back over the shoulder. */
+function makeBat(dir: number): THREE.Group {
+  const bat = new THREE.Group();
+  bat.name = "bat";
+
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), toon(0x8a5a2b));
+  bat.add(knob);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.34, 12), toon(0x8a5a2b));
+  handle.position.y = 0.18;
+  bat.add(handle);
+  const barrel = outlined(new THREE.CapsuleGeometry(0.085, 0.66, 8, 14), 0xe7b277, 1.12);
+  barrel.position.y = 0.74;
+  bat.add(barrel);
+
+  bat.rotation.z = dir * 0.5;
+  bat.rotation.x = 0.35;
+  return bat;
+}
+
 /** Batter: back to the camera (faces −Z toward the pitcher), wears a helmet, and
- * holds a bat on a named pivot ("bat") at the hands so the swing can rotate it. */
+ * is fully rigged like the pitcher — named pivots "frontLeg"/"backLeg" (with
+ * "frontShin"/"backShin" knees) for the stride/leg-lift, "body" (trunk rotation
+ * and lean) holding the head/torso, and "bat" (pivot at the hands) for the load
+ * and swing arc. */
 export function makeChibiBatter(colors: ChibiColors, batsLeft: boolean): THREE.Group {
   const g = new THREE.Group();
-  g.add(lowerBody(colors));
-  g.add(headWithCap(colors, -1, true));
+  const hip = HIP_Y;
+  const dir = batsLeft ? -1 : 1;
+
+  // jointed legs: the front (stride) leg lifts before the swing fires
+  const backLeg = jointedLeg("backShin");
+  backLeg.name = "backLeg";
+  backLeg.position.set(dir * 0.18, hip, 0.05);
+  g.add(backLeg);
+
+  const frontLeg = jointedLeg("frontShin");
+  frontLeg.name = "frontLeg";
+  frontLeg.position.set(-dir * 0.18, hip, -0.05);
+  g.add(frontLeg);
+
+  // upper body pivots at the hips so the swing rotates the whole trunk (轉身)
+  const body = new THREE.Group();
+  body.name = "body";
+  body.position.set(0, hip, 0);
+
+  const torso = outlined(new THREE.BoxGeometry(0.64, 0.58, 0.38), colors.jersey);
+  torso.position.set(0, 0.66 - hip, 0);
+  body.add(torso);
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.1, 0.4), toon(colors.trim));
+  belt.position.set(0, 0.4 - hip, 0);
+  body.add(belt);
+
+  const head = headWithCap(colors, -1, true);
+  head.position.y = -hip; // re-base absolute head positions onto the hip pivot
+  body.add(head);
 
   // jersey number plate on the back (faces the camera, +Z)
   const plate = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.04), toon(0xffffff));
-  plate.position.set(0, 0.72, 0.2);
-  g.add(plate);
-
-  const dir = batsLeft ? -1 : 1;
+  plate.position.set(0, 0.72 - hip, 0.2);
+  body.add(plate);
 
   // both hands grip near the back shoulder
   const grip = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 12), toon(SKIN));
-  grip.position.set(dir * 0.34, 0.9, 0.08);
-  g.add(grip);
+  grip.position.set(dir * 0.34, 0.9 - hip, 0.08);
+  body.add(grip);
 
-  // bat: pivot at the hands; at rest it points up and slightly back over the shoulder
-  const bat = new THREE.Group();
-  bat.name = "bat";
-  bat.position.set(dir * 0.34, 0.9, 0.08);
-  const barrel = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.95, 6, 12), toon(0xd9a05b));
-  barrel.position.set(0, 0.5, 0);
-  bat.add(barrel);
-  // rest pose: cocked up and back over the shoulder
-  bat.rotation.z = dir * 0.5;
-  bat.rotation.x = 0.35;
-  g.add(bat);
+  const bat = makeBat(dir);
+  bat.position.set(dir * 0.34, 0.9 - hip, 0.08);
+  body.add(bat);
 
+  g.add(body);
   return g;
 }

@@ -44,8 +44,9 @@ export interface GameParams {
 type Phase = "preparePitch" | "selectPitch" | "aim" | "windup" | "flight" | "result";
 
 const TICK = 1 / 60;
-/** Swing animation length in logic ticks. */
-const SWING_TICKS = 24;
+/** Swing animation length in logic ticks: leg lift + load → stride → rotate →
+ * whip through the zone → follow-through (~0.47 s at 60 Hz). */
+const SWING_TICKS = 28;
 /** Pitching delivery length in logic ticks: gather → leg lift → stride →
  * arm whip → release (~1.2 s at 60 Hz). */
 const WINDUP_TICKS = 72;
@@ -166,6 +167,87 @@ const DELIVERY: { t: number; p: PitcherPose }[] = [
 
 const smoothstep = (u: number): number => u * u * (3 - 2 * u);
 
+/** One frame of the batter's swing. `dir`-signed fields (bodyY, batY, batZ) are
+ * multiplied by the bat handedness at apply time; the rest are symmetric. */
+interface SwingPose {
+  frontLeg: number; // stride-leg hip lift
+  frontShin: number; // stride-leg knee bend
+  bodyY: number; // trunk rotation (coil → open through the ball) ×dir
+  bodyX: number; // trunk lean
+  batY: number; // bat sweep about vertical ×dir
+  batX: number; // bat tilt (cocked up → level through the zone)
+  batZ: number; // bat lay-back over the shoulder ×dir
+}
+
+/** Key poses of the swing across normalized time t∈[0,1]: 抬腳 lift the stride
+ * leg while 引棒 loading the hands back and coiling the trunk → stride the foot
+ * down and start opening the hips → 轉身 rotate the body and 揮擊 whip the bat
+ * level through the zone → follow-through wrapping around. */
+const SWING: { t: number; p: SwingPose }[] = [
+  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: 0.5 } },
+  // 抬腳 + 引棒: front knee up, hands load back, shoulders coil toward the catcher
+  {
+    t: 0.24,
+    p: {
+      frontLeg: -0.7,
+      frontShin: 0.6,
+      bodyY: 0.32,
+      bodyX: -0.05,
+      batY: 0.4,
+      batX: 0.5,
+      batZ: 0.6,
+    },
+  },
+  // stride down, hips begin to fire open
+  {
+    t: 0.42,
+    p: { frontLeg: -0.1, frontShin: 0.1, bodyY: -0.2, bodyX: 0.0, batY: 0.1, batX: 0.3, batZ: 0.4 },
+  },
+  // 轉身 + 揮擊: trunk fully rotated, bat whips level through the zone (contact)
+  {
+    t: 0.64,
+    p: {
+      frontLeg: 0.05,
+      frontShin: 0,
+      bodyY: -0.78,
+      bodyX: 0.07,
+      batY: -1.7,
+      batX: 0.0,
+      batZ: 0.15,
+    },
+  },
+  // follow-through, bat wraps around the body
+  {
+    t: 1.0,
+    p: { frontLeg: 0, frontShin: 0, bodyY: -0.98, bodyX: 0.04, batY: -2.6, batX: -0.1, batZ: 0.0 },
+  },
+];
+
+/** Interpolate the swing pose at normalized time t. */
+function swingPose(t: number): SwingPose {
+  let a = SWING[0]!;
+  let b = SWING[SWING.length - 1]!;
+  for (let i = 0; i < SWING.length - 1; i++) {
+    if (t >= SWING[i]!.t && t <= SWING[i + 1]!.t) {
+      a = SWING[i]!;
+      b = SWING[i + 1]!;
+      break;
+    }
+  }
+  const span = b.t - a.t || 1;
+  const u = smoothstep(Math.max(0, Math.min(1, (t - a.t) / span)));
+  const mix = (k: keyof SwingPose): number => a.p[k] + (b.p[k] - a.p[k]) * u;
+  return {
+    frontLeg: mix("frontLeg"),
+    frontShin: mix("frontShin"),
+    bodyY: mix("bodyY"),
+    bodyX: mix("bodyX"),
+    batY: mix("batY"),
+    batX: mix("batX"),
+    batZ: mix("batZ"),
+  };
+}
+
 /** Interpolate the delivery pose at normalized time t. */
 function deliveryPose(t: number): PitcherPose {
   let a = DELIVERY[0]!;
@@ -248,6 +330,9 @@ export class GameScene implements Scene {
   private pitcherRestZ = WORLD.moundZ + 0.3;
   private batter3d: THREE.Group | null = null;
   private batterBat: THREE.Object3D | null = null;
+  private batterBody: THREE.Object3D | null = null;
+  private batterFrontLeg: THREE.Object3D | null = null;
+  private batterFrontShin: THREE.Object3D | null = null;
   private charLayer = new THREE.Group();
   private hud!: Hud;
   private swingTicks = 0;
@@ -428,7 +513,11 @@ export class GameScene implements Scene {
     const batsLeft = this.batter.bats === "L";
     this.batter3d = makeChibiBatter(this.hexColors(this.battingTeam), batsLeft);
     this.batter3d.position.set(batsLeft ? WORLD.batterX : -WORLD.batterX, 0, WORLD.batterZ);
-    this.batterBat = this.batter3d.getObjectByName("bat") ?? null;
+    const grabB = (n: string): THREE.Object3D | null => this.batter3d!.getObjectByName(n) ?? null;
+    this.batterBat = grabB("bat");
+    this.batterBody = grabB("body");
+    this.batterFrontLeg = grabB("frontLeg");
+    this.batterFrontShin = grabB("frontShin");
     this.charLayer.add(this.batter3d);
 
     this.swingTicks = 0;
@@ -555,34 +644,24 @@ export class GameScene implements Scene {
     }
   }
 
-  /** Bat swing: cock back, sweep through the zone (horizontal Y rotation), hold. */
+  /** Full swing: 抬腳 lift the stride leg + 引棒 load the hands, stride down and
+   * 轉身 rotate the trunk, then 揮擊 whip the bat level through the zone and follow
+   * through. Applies the keyframed SwingPose to the batter's rig. */
   private updateSwingAnimation(): void {
-    if (this.swingTicks <= 0 || !this.batter3d || !this.batterBat) return;
+    if (this.swingTicks <= 0 || !this.batterBat) return;
     this.swingTicks -= 1;
-    const t = 1 - this.swingTicks / SWING_TICKS;
     const dir = this.swingDir;
+    const p = swingPose(this.swingTicks === 0 ? 0 : 1 - this.swingTicks / SWING_TICKS);
 
-    let batAngle: number;
-    let lean: number;
-    if (t < 0.15) {
-      const k = t / 0.15;
-      batAngle = k * 0.4; // cock back
-      lean = k * 0.06;
-    } else if (t < 0.45) {
-      const k = (t - 0.15) / 0.3;
-      batAngle = 0.4 - k * 2.7; // sweep across the plate
-      lean = 0.06 - k * 0.22;
-    } else {
-      batAngle = -2.3; // follow-through
-      lean = -0.16;
+    if (this.batterFrontLeg) this.batterFrontLeg.rotation.x = p.frontLeg;
+    if (this.batterFrontShin) this.batterFrontShin.rotation.x = p.frontShin;
+    if (this.batterBody) {
+      this.batterBody.rotation.y = dir * p.bodyY;
+      this.batterBody.rotation.x = p.bodyX;
     }
-    this.batterBat.rotation.y = dir * batAngle;
-    this.batter3d.rotation.y = dir * lean;
-
-    if (this.swingTicks === 0) {
-      this.batterBat.rotation.y = 0;
-      this.batter3d.rotation.y = 0;
-    }
+    this.batterBat.rotation.y = dir * p.batY;
+    this.batterBat.rotation.x = p.batX;
+    this.batterBat.rotation.z = dir * p.batZ;
   }
 
   private updatePrepare(): void {
