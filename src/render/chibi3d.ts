@@ -468,5 +468,14 @@ export function makeChibiBatter(colors: ChibiColors, batsLeft: boolean): THREE.G
   body.add(bat);
 
   g.add(body);
+
+  // Turn the whole figure side-on so it takes a real batting stance: chest facing
+  // the plate (the +X plate side for a RH batter at −X, −X for a LH batter at +X)
+  // rather than squared chest-on to the pitcher. This also lays the two feet along
+  // the Z axis — parallel to the long axis of the batter's box — with the front
+  // leg toward the pitcher (−Z) and the bat cocked back over the rear shoulder
+  // (toward +Z / the camera). The swing's trunk + bat rotations compose on top of
+  // this base turn, so the cut still opens out through the ball.
+  g.rotation.y = -dir * (Math.PI / 2);
   return g;
 }
