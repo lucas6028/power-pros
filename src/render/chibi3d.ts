@@ -215,10 +215,12 @@ function makeBat(dir: number): THREE.Group {
   tip.position.y = 1.14;
   bat.add(tip);
 
-  // cocked up over the back shoulder; matches the swing's t=0 rest pose so the
-  // bat doesn't pop when a swing starts (see SWING in GameScene)
-  bat.rotation.z = dir * -0.5;
-  bat.rotation.x = 0.35;
+  // stood up beside the back ear, tilted back over the shoulder — NOT laid across
+  // the plate (a positive batZ tucks the barrel toward the head/rear, off the
+  // strike zone). Matches the swing's t=0 rest pose so the bat doesn't pop when a
+  // swing starts (see SWING in GameScene).
+  bat.rotation.z = dir * 0.15;
+  bat.rotation.x = 0.45;
   return bat;
 }
 
