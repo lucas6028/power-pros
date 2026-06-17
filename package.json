@@ -13,12 +13,14 @@
   },
   "dependencies": {
     "pixi.js": "^8.19.0",
+    "three": "^0.184.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.2",
+    "@types/three": "^0.184.1",
     "eslint": "^10.4.1",
     "prettier": "^3.8.4",
     "tsx": "^4.22.4",

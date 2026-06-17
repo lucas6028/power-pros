@@ -1,23 +1,31 @@
 import { Container } from "pixi.js";
 import type { Input } from "../ui/input";
+import type { ThreeStage } from "../render/three-stage";
 
 export const GAME_W = 960;
 export const GAME_H = 540;
 
 export interface SceneContext {
+  /** Pixi stage for 2D scenes (menus). */
   stage: Container;
+  /** WebGL host + DOM overlay for 3D scenes (the game). */
+  three: ThreeStage;
+  /** DOM overlay root layered over the WebGL canvas (HUD lives here). */
+  overlay: HTMLElement;
   input: Input;
   goTo(scene: string, params?: unknown): void;
 }
 
 export interface Scene {
   readonly name: string;
-  /** Build display objects and add them to ctx.stage. */
+  /** Build display objects and add them to ctx.stage (2D) or ctx.three (3D). */
   enter(ctx: SceneContext, params?: unknown): void;
   /** Remove and destroy display objects. */
   exit(): void;
   /** One 60 Hz logic tick. */
   update(dt: number): void;
+  /** Optional per-frame render hook for scenes that drive their own renderer (3D). */
+  render?(): void;
   /** Optional debug snapshot for tests. */
   debugState?(): Record<string, unknown>;
 }
@@ -29,6 +37,7 @@ export class SceneManager {
 
   constructor(
     private stage: Container,
+    private three: ThreeStage,
     private input: Input,
   ) {}
 
@@ -56,7 +65,16 @@ export class SceneManager {
       if (!next) throw new Error(`unknown scene: ${name}`);
       this.current?.exit();
       this.current = next;
-      next.enter({ stage: this.stage, input: this.input, goTo: (n, p) => this.goTo(n, p) }, params);
+      next.enter(
+        {
+          stage: this.stage,
+          three: this.three,
+          overlay: this.three.overlay,
+          input: this.input,
+          goTo: (n, p) => this.goTo(n, p),
+        },
+        params,
+      );
     }
     this.current?.update(dt);
   }

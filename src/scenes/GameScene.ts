@@ -1,9 +1,8 @@
-import { Container, Graphics } from "pixi.js";
+import * as THREE from "three";
 import type { Scene, SceneContext } from "./scene";
-import { GAME_W, GAME_H } from "./scene";
-import { makeText } from "../render/text";
-import { drawField } from "../render/field";
-import { chibiFront, chibiBatterBack } from "../render/chibi";
+import { buildField, makeCamera, WORLD } from "../render/field3d";
+import { makeChibiPitcher, makeChibiBatter } from "../render/chibi3d";
+import { Hud } from "../ui/hud";
 import { teamById, t } from "../data/index";
 import { createRng, type Rng } from "../game/rng";
 import type {
@@ -44,10 +43,6 @@ export interface GameParams {
 
 type Phase = "preparePitch" | "selectPitch" | "aim" | "windup" | "flight" | "result";
 
-const ZONE_CX = GAME_W / 2;
-const ZONE_CY = 408;
-const ZONE_SCALE = 72; // pixels per strike-zone unit
-const RELEASE = { x: GAME_W / 2, y: 252 };
 const TICK = 1 / 60;
 /** Swing animation length in logic ticks. */
 const SWING_TICKS = 24;
@@ -55,6 +50,12 @@ const SWING_TICKS = 24;
 const WINDUP_TICKS = 48;
 /** Minimum pause after every pitch resolves before the next one (5 s at 60 Hz). */
 const RESULT_WAIT_TICKS = 300;
+
+/** Pitcher's feet rest on top of the mound/rubber. */
+const PITCHER_BASE_Y = 0.3;
+/** World metres per strike-zone unit of break, exaggerated for arcade readability
+ * (also keeps projected trajectory deviation comparable to the old 2D renderer). */
+const BREAK_WORLD = 1.6;
 
 const PITCH_NAMES: Record<PitchTypeId, string> = {
   fastball: "直球",
@@ -67,7 +68,6 @@ const PITCH_NAMES: Record<PitchTypeId, string> = {
 
 export class GameScene implements Scene {
   readonly name = "game";
-  private root = new Container();
   private ctx!: SceneContext;
   private rng: Rng = createRng(1);
   private teams!: [Team, Team];
@@ -85,9 +85,12 @@ export class GameScene implements Scene {
   private swing: SwingAttempt | null = null;
   private swung = false;
   private lastPlay: PlayEvent | null = null;
-  /** Screen-space break of the pitch in flight (drawn arriving late). */
-  private breakScreen = { x: 0, y: 0 };
-  /** Ball positions of the most recent flight, one per logic tick (debug/tests). */
+  /** Start/end world points + late break vector of the active flight. */
+  private flightStart = new THREE.Vector3();
+  private flightEnd = new THREE.Vector3();
+  private breakWorld = { x: 0, y: 0 };
+  /** World (x, y) ball positions of the most recent flight, one per logic tick
+   * (debug/tests). World space is uniform per tick so a fastball traces a line. */
   private flightTrace: { x: number; y: number }[] = [];
   private pitchSeq = 0;
   // wind-up
@@ -100,36 +103,26 @@ export class GameScene implements Scene {
   // player batting UI
   private cursor = { x: 0, y: 0 };
 
-  // display objects
-  private ball!: Graphics;
-  private cursorG!: Graphics;
-  private aimG!: Graphics;
-  private zoneG!: Graphics;
-  private pitcherC: Container | null = null;
-  private pitcherArm: Container | null = null;
-  private pitcherArmBall: Container | null = null;
-  private batterC: Container | null = null;
-  private batterBat: Graphics | null = null;
-  private charLayer = new Container();
-  private msg!: ReturnType<typeof makeText>;
-  private speedText!: ReturnType<typeof makeText>;
-  private scoreText!: ReturnType<typeof makeText>;
-  private inningText!: ReturnType<typeof makeText>;
-  private countG!: Graphics;
-  private basesG!: Graphics;
-  private pitchListC!: Container;
-  private hintText!: ReturnType<typeof makeText>;
-  private batterText!: ReturnType<typeof makeText>;
+  // three.js scene graph
+  private scene3d = new THREE.Scene();
+  private camera = makeCamera();
+  private ball!: THREE.Mesh;
+  private cursorRing!: THREE.Mesh;
+  private aimRing!: THREE.Mesh;
+  private pitcher3d: THREE.Group | null = null;
+  private pitcherArm: THREE.Object3D | null = null;
+  private pitcherArmBall: THREE.Object3D | null = null;
+  private batter3d: THREE.Group | null = null;
+  private batterBat: THREE.Object3D | null = null;
+  private charLayer = new THREE.Group();
+  private hud!: Hud;
   private swingTicks = 0;
   private swingDir = 1;
   private currentBatterId = "";
-  private countLabels: ReturnType<typeof makeText>[] = [];
 
   enter(ctx: SceneContext, params?: unknown): void {
     const p = params as GameParams;
     this.ctx = ctx;
-    this.root = new Container();
-    this.charLayer = new Container();
     this.teams = [teamById(p.awayId), teamById(p.homeId)];
     this.playerTeam = p.playerTeam;
     this.rng = createRng(p.seed ?? Date.now() & 0xffffffff);
@@ -139,74 +132,66 @@ export class GameScene implements Scene {
     this.lastPlay = null;
     this.currentBatterId = "";
 
-    this.root.addChild(drawField());
-    this.root.addChild(this.charLayer);
+    this.scene3d = new THREE.Scene();
+    this.scene3d.background = new THREE.Color(0x9adcf0);
+    this.camera = makeCamera();
+    this.scene3d.add(buildField());
 
-    this.zoneG = new Graphics();
-    this.drawZone();
-    this.root.addChild(this.zoneG);
+    this.charLayer = new THREE.Group();
+    this.scene3d.add(this.charLayer);
 
-    this.ball = new Graphics();
-    this.ball.circle(0, 0, 11).fill(0xffffff).stroke({ width: 3, color: 0x3a2620 });
-    this.ball.moveTo(-6, -3).quadraticCurveTo(0, 0, -6, 3).stroke({ width: 2, color: 0xd44 });
-    this.ball.moveTo(6, -3).quadraticCurveTo(0, 0, 6, 3).stroke({ width: 2, color: 0xd44 });
-    this.ball.visible = false;
-    this.root.addChild(this.ball);
+    this.buildZone();
 
-    this.cursorG = new Graphics();
-    this.aimG = new Graphics();
-    this.root.addChild(this.cursorG, this.aimG);
-
-    // HUD
-    const hudBg = new Graphics();
-    hudBg.roundRect(12, 10, 250, 92, 10).fill({ color: 0x1a1a2e, alpha: 0.82 });
-    hudBg.roundRect(GAME_W - 132, 10, 120, 110, 10).fill({ color: 0x1a1a2e, alpha: 0.82 });
-    this.root.addChild(hudBg);
-
-    this.scoreText = makeText("", { fontSize: 24 });
-    this.scoreText.position.set(24, 16);
-    this.inningText = makeText("", { fontSize: 18, fill: 0x9adcf0 });
-    this.inningText.position.set(24, 48);
-    this.countG = new Graphics();
-    this.basesG = new Graphics();
-    this.msg = makeText("", { fontSize: 44, fill: 0xffe14d });
-    this.msg.anchor.set(0.5);
-    this.msg.position.set(GAME_W / 2, 180);
-    this.speedText = makeText("", { fontSize: 22 });
-    this.speedText.anchor.set(0.5);
-    this.speedText.position.set(GAME_W / 2 + 190, 330);
-    this.batterText = makeText("", { fontSize: 18 });
-    this.batterText.position.set(24, 74);
-    this.hintText = makeText(t("swingHint"), { fontSize: 14, fontWeight: "400" });
-    this.hintText.anchor.set(0.5);
-    this.hintText.position.set(GAME_W / 2, GAME_H - 8);
-    this.pitchListC = new Container();
-    this.pitchListC.position.set(20, GAME_H - 160);
-    this.root.addChild(
-      this.scoreText,
-      this.inningText,
-      this.countG,
-      this.basesG,
-      this.msg,
-      this.speedText,
-      this.batterText,
-      this.hintText,
-      this.pitchListC,
+    this.ball = new THREE.Mesh(
+      new THREE.SphereGeometry(0.095, 18, 14),
+      new THREE.MeshToonMaterial({ color: 0xffffff }),
     );
+    this.ball.visible = false;
+    this.scene3d.add(this.ball);
 
-    this.countLabels = [];
+    this.cursorRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.12, 0.16, 32),
+      new THREE.MeshBasicMaterial({ color: 0x4da6ff, transparent: true, opacity: 0.9 }),
+    );
+    this.cursorRing.visible = false;
+    this.aimRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.1, 0.14, 32),
+      new THREE.MeshBasicMaterial({ color: 0xff5252, transparent: true, opacity: 0.95 }),
+    );
+    this.aimRing.visible = false;
+    this.scene3d.add(this.cursorRing, this.aimRing);
+
+    this.hud = new Hud(ctx.overlay);
+
     this.rebuildCharacters();
     this.refreshHud();
-    ctx.stage.addChild(this.root);
+    ctx.three.activate(this.scene3d, this.camera);
   }
 
   exit(): void {
-    this.root.destroy({ children: true });
-    this.pitcherC = null;
-    this.batterC = null;
+    this.hud.dispose();
+    this.ctx.three.deactivate();
+    this.disposeScene();
+    this.pitcher3d = null;
+    this.batter3d = null;
+  }
+
+  render(): void {
+    this.ctx.three.render();
   }
 
   // ---------------------------------------------------------------- helpers
+
+  private disposeScene(): void {
+    this.scene3d.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      const mat = mesh.material;
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else if (mat) mat.dispose();
+    });
+    this.scene3d.clear();
+  }
 
   private get battingTeam(): Team {
     return this.teams[battingTeamIndex(this.state)];
@@ -224,115 +209,115 @@ export class GameScene implements Scene {
     return battingTeamIndex(this.state) === this.playerTeam;
   }
 
-  private zoneToScreen(x: number, y: number): { x: number; y: number } {
-    return { x: ZONE_CX + x * ZONE_SCALE, y: ZONE_CY - y * ZONE_SCALE };
+  /** Strike-zone unit coordinates → world point on the zone plane over the plate. */
+  private zoneToWorld(x: number, y: number): THREE.Vector3 {
+    return new THREE.Vector3(
+      x * WORLD.zoneUnit,
+      WORLD.zoneCenterY + y * WORLD.zoneUnit,
+      WORLD.zoneZ,
+    );
   }
 
-  private drawZone(): void {
-    this.zoneG.clear();
-    this.zoneG
-      .rect(ZONE_CX - ZONE_SCALE, ZONE_CY - ZONE_SCALE, ZONE_SCALE * 2, ZONE_SCALE * 2)
-      .fill({ color: 0xffffff, alpha: 0.1 })
-      .stroke({ width: 3, color: 0xffffff, alpha: 0.75 });
-    // ninths grid
+  private hexColors(team: Team): { jersey: number; cap: number; trim: number } {
+    return {
+      jersey: parseInt(team.colors.primary.slice(1), 16),
+      cap: parseInt(team.colors.cap.slice(1), 16),
+      trim: parseInt(team.colors.secondary.slice(1), 16),
+    };
+  }
+
+  private buildZone(): void {
+    const u = WORLD.zoneUnit;
+    const cy = WORLD.zoneCenterY;
+    const z = WORLD.zoneZ - 0.01;
+
+    // faint fill
+    const fill = new THREE.Mesh(
+      new THREE.PlaneGeometry(2 * u, 2 * u),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+      }),
+    );
+    fill.position.set(0, cy, z);
+    this.scene3d.add(fill);
+
+    const seg = (pts: THREE.Vector3[], opacity: number): THREE.Line =>
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity }),
+      );
+
+    // bold outer box
+    this.scene3d.add(
+      seg(
+        [
+          new THREE.Vector3(-u, cy - u, z),
+          new THREE.Vector3(u, cy - u, z),
+          new THREE.Vector3(u, cy + u, z),
+          new THREE.Vector3(-u, cy + u, z),
+          new THREE.Vector3(-u, cy - u, z),
+        ],
+        0.75,
+      ),
+    );
+    // inner thirds grid
     for (let i = 1; i < 3; i++) {
-      const o = -ZONE_SCALE + (2 * ZONE_SCALE * i) / 3;
-      this.zoneG
-        .moveTo(ZONE_CX + o, ZONE_CY - ZONE_SCALE)
-        .lineTo(ZONE_CX + o, ZONE_CY + ZONE_SCALE)
-        .moveTo(ZONE_CX - ZONE_SCALE, ZONE_CY + o)
-        .lineTo(ZONE_CX + ZONE_SCALE, ZONE_CY + o)
-        .stroke({ width: 1, color: 0xffffff, alpha: 0.3 });
+      const o = -u + (2 * u * i) / 3;
+      this.scene3d.add(
+        seg([new THREE.Vector3(o, cy - u, z), new THREE.Vector3(o, cy + u, z)], 0.3),
+      );
+      this.scene3d.add(
+        seg([new THREE.Vector3(-u, cy + o, z), new THREE.Vector3(u, cy + o, z)], 0.3),
+      );
     }
   }
 
   private rebuildCharacters(): void {
-    this.charLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.charLayer.clear();
 
-    const fieldColors = this.fieldingTeam.colors;
-    this.pitcherC = chibiFront({
-      jersey: parseInt(fieldColors.primary.slice(1), 16),
-      cap: parseInt(fieldColors.cap.slice(1), 16),
-      trim: parseInt(fieldColors.secondary.slice(1), 16),
-    });
-    this.pitcherC.scale.set(0.52);
-    this.pitcherC.position.set(GAME_W / 2, 252);
-    this.pitcherC.rotation = 0;
-    this.pitcherArm = this.pitcherC.getChildByLabel("arm") as Container | null;
-    this.pitcherArmBall = (this.pitcherArm?.getChildByLabel("armBall") ?? null) as Container | null;
-    this.charLayer.addChild(this.pitcherC);
+    this.pitcher3d = makeChibiPitcher(this.hexColors(this.fieldingTeam));
+    this.pitcher3d.scale.setScalar(1.7); // larger so the wind-up reads at distance
+    this.pitcher3d.position.set(0, PITCHER_BASE_Y, WORLD.moundZ + 0.3);
+    this.pitcherArm = this.pitcher3d.getObjectByName("arm") ?? null;
+    this.pitcherArmBall = this.pitcherArm?.getObjectByName("armBall") ?? null;
+    this.charLayer.add(this.pitcher3d);
 
-    const batColors = this.battingTeam.colors;
     const batsLeft = this.batter.bats === "L";
-    this.batterC = chibiBatterBack(
-      {
-        jersey: parseInt(batColors.primary.slice(1), 16),
-        cap: parseInt(batColors.cap.slice(1), 16),
-        trim: parseInt(batColors.secondary.slice(1), 16),
-      },
-      batsLeft,
-    );
-    this.batterC.scale.set(0.95);
-    this.batterC.position.set(GAME_W / 2 + (batsLeft ? 150 : -150), GAME_H - 70);
-    this.batterC.rotation = 0;
-    this.batterBat = this.batterC.getChildByLabel("bat") as Graphics | null;
+    this.batter3d = makeChibiBatter(this.hexColors(this.battingTeam), batsLeft);
+    this.batter3d.position.set(batsLeft ? WORLD.batterX : -WORLD.batterX, 0, WORLD.batterZ);
+    this.batterBat = this.batter3d.getObjectByName("bat") ?? null;
+    this.charLayer.add(this.batter3d);
+
     this.swingTicks = 0;
     this.cursor = { x: 0, y: 0 }; // new batter starts with a centered cursor
-    this.charLayer.addChild(this.batterC);
     this.currentBatterId = this.batter.id;
   }
 
   private refreshHud(): void {
     const [away, home] = this.teams;
     const s = this.state;
-    this.scoreText.text = `${away.abbr} ${s.score[0]} - ${s.score[1]} ${home.abbr}`;
-    this.inningText.text = `${s.inning}${t("inning")}${s.half === "top" ? t("top") : t("bottom")}`;
-    this.batterText.text = `${this.batter.position} ${this.batter.name}`;
-
-    // count lamps
-    this.countG.clear();
-    this.countLabels.forEach((l) => l.destroy());
-    this.countLabels = [];
-    const lampRow = (
-      label: "B" | "S" | "O",
-      row: number,
-      total: number,
-      lit: number,
-      color: number,
-    ): void => {
-      const lt = makeText(label, { fontSize: 14, fill: 0x9a9ab8 });
-      lt.anchor.set(0.5);
-      lt.position.set(152, 24 + row * 24);
-      this.root.addChild(lt);
-      this.countLabels.push(lt);
-      for (let i = 0; i < total; i++) {
-        this.countG
-          .circle(172 + i * 22, 24 + row * 24, 8)
-          .fill(i < lit ? color : 0x3c3c50)
-          .stroke({ width: 2, color: 0x10101c });
-      }
-    };
-    lampRow("B", 0, 3, this.state.balls, 0x4caf50);
-    lampRow("S", 1, 2, this.state.strikes, 0xffc107);
-    lampRow("O", 2, 2, this.state.outs, 0xf44336);
-
-    // bases diamond (top-right)
-    this.basesG.clear();
-    const bx = GAME_W - 72;
-    const by = 64;
-    const sz = 17;
-    const diamonds: [number, number, number | null][] = [
-      [bx + 28, by, this.state.bases[0]],
-      [bx, by - 28, this.state.bases[1]],
-      [bx - 28, by, this.state.bases[2]],
-    ];
-    for (const [dx, dy, occ] of diamonds) {
-      this.basesG
-        .poly([dx, dy - sz, dx + sz, dy, dx, dy + sz, dx - sz, dy])
-        .fill(occ !== null ? 0xffe14d : 0x3c3c50)
-        .stroke({ width: 3, color: 0xffffff });
-    }
+    this.hud.update({
+      scoreLine: `${away.abbr} ${s.score[0]} - ${s.score[1]} ${home.abbr}`,
+      inning: `${s.inning}${t("inning")}${s.half === "top" ? t("top") : t("bottom")}`,
+      batter: `${this.batter.position} ${this.batter.name}`,
+      balls: s.balls,
+      strikes: s.strikes,
+      outs: s.outs,
+      bases: [s.bases[0] !== null, s.bases[1] !== null, s.bases[2] !== null],
+      message: this.msgText,
+      speed: this.speedTextStr,
+      hint: t("swingHint"),
+      pitchList: this.pitchListData,
+    });
   }
+
+  // HUD text is held on the instance so refreshHud can re-emit the full state
+  private msgText = "";
+  private speedTextStr = "";
+  private pitchListData: { names: string[]; selected: number } | null = null;
 
   // ---------------------------------------------------------------- update
 
@@ -363,12 +348,12 @@ export class GameScene implements Scene {
     }
     this.updateSwingAnimation();
     // after the release, the pitcher eases back to the set position
-    if (this.phase !== "windup" && this.pitcherArm && this.pitcherC) {
-      this.pitcherArm.rotation *= 0.88;
-      this.pitcherC.rotation *= 0.88;
-      this.pitcherC.position.y += (RELEASE.y - this.pitcherC.position.y) * 0.15;
-      if (Math.abs(this.pitcherArm.rotation) < 0.02) this.pitcherArm.rotation = 0;
-      if (Math.abs(this.pitcherC.rotation) < 0.005) this.pitcherC.rotation = 0;
+    if (this.phase !== "windup" && this.pitcherArm && this.pitcher3d) {
+      this.pitcherArm.rotation.x *= 0.88;
+      this.pitcher3d.rotation.x *= 0.88;
+      this.pitcher3d.position.y += (PITCHER_BASE_Y - this.pitcher3d.position.y) * 0.15;
+      if (Math.abs(this.pitcherArm.rotation.x) < 0.02) this.pitcherArm.rotation.x = 0;
+      if (Math.abs(this.pitcher3d.rotation.x) < 0.005) this.pitcher3d.rotation.x = 0;
     }
   }
 
@@ -404,10 +389,10 @@ export class GameScene implements Scene {
       lean = -0.07 + 0.18 * k;
       crouch = 5 - 9 * k; // push off the rubber
     }
-    if (this.pitcherArm) this.pitcherArm.rotation = armRot;
-    if (this.pitcherC) {
-      this.pitcherC.rotation = lean;
-      this.pitcherC.position.y = RELEASE.y + crouch;
+    if (this.pitcherArm) this.pitcherArm.rotation.x = armRot;
+    if (this.pitcher3d) {
+      this.pitcher3d.rotation.x = lean;
+      this.pitcher3d.position.y = PITCHER_BASE_Y + crouch * 0.012;
     }
 
     if (this.windupTicks <= 0) {
@@ -417,9 +402,9 @@ export class GameScene implements Scene {
     }
   }
 
-  /** Bat swing: cock back, sweep through the zone, hold the follow-through. */
+  /** Bat swing: cock back, sweep through the zone (horizontal Y rotation), hold. */
   private updateSwingAnimation(): void {
-    if (this.swingTicks <= 0 || !this.batterC) return;
+    if (this.swingTicks <= 0 || !this.batter3d || !this.batterBat) return;
     this.swingTicks -= 1;
     const t = 1 - this.swingTicks / SWING_TICKS;
     const dir = this.swingDir;
@@ -438,30 +423,34 @@ export class GameScene implements Scene {
       batAngle = -2.3; // follow-through
       lean = -0.16;
     }
-    if (this.batterBat) this.batterBat.rotation = dir * batAngle;
-    this.batterC.rotation = dir * lean;
+    this.batterBat.rotation.y = dir * batAngle;
+    this.batter3d.rotation.y = dir * lean;
 
     if (this.swingTicks === 0) {
-      if (this.batterBat) this.batterBat.rotation = 0;
-      this.batterC.rotation = 0;
+      this.batterBat.rotation.y = 0;
+      this.batter3d.rotation.y = 0;
     }
   }
 
   private updatePrepare(): void {
     if (this.currentBatterId !== this.batter.id) this.rebuildCharacters();
-    this.msg.text = "";
-    this.speedText.text = "";
+    this.msgText = "";
+    this.speedTextStr = "";
     this.ball.visible = false;
     this.swing = null;
     this.swung = false;
     this.pitch = null;
     this.aim = { x: 0, y: 0 };
+    this.aimRing.visible = false;
+    this.pitchListData = null;
 
     // the batter can set up the swing spot before the pitch
     if (this.playerIsBatting) this.updateBattingCursor();
+    else this.cursorRing.visible = false;
 
     if (this.timer > 0) {
       this.timer -= 1;
+      this.refreshHud();
       return;
     }
     if (this.playerIsBatting) {
@@ -470,7 +459,7 @@ export class GameScene implements Scene {
       this.beginWindup(throwPitch(this.pitcher, this.intent, this.rng));
     } else {
       this.pitchSel = 0;
-      this.buildPitchList();
+      this.refreshPitchList();
       this.phase = "selectPitch";
     }
   }
@@ -479,21 +468,12 @@ export class GameScene implements Scene {
     return ["fastball", ...(this.pitcher.pitching?.breakingBalls.map((b) => b.type) ?? [])];
   }
 
-  private buildPitchList(): void {
-    this.pitchListC.removeChildren().forEach((c) => c.destroy({ children: true }));
-    const arsenal = this.arsenal();
-    const bg = new Graphics();
-    bg.roundRect(-8, -8, 150, arsenal.length * 30 + 12, 8).fill({ color: 0x1a1a2e, alpha: 0.82 });
-    this.pitchListC.addChild(bg);
-    arsenal.forEach((pt, i) => {
-      const label = makeText(`${i === this.pitchSel ? "▶ " : "　"}${PITCH_NAMES[pt]}`, {
-        fontSize: 20,
-        fill: i === this.pitchSel ? 0xffe14d : 0xffffff,
-      });
-      label.position.set(0, i * 30);
-      this.pitchListC.addChild(label);
-    });
-    this.pitchListC.visible = true;
+  private refreshPitchList(): void {
+    this.pitchListData = {
+      names: this.arsenal().map((pt) => PITCH_NAMES[pt]),
+      selected: this.pitchSel,
+    };
+    this.refreshHud();
   }
 
   private updateSelectPitch(): void {
@@ -501,14 +481,15 @@ export class GameScene implements Scene {
     const n = this.arsenal().length;
     if (inp.justPressed("ArrowUp")) {
       this.pitchSel = (this.pitchSel + n - 1) % n;
-      this.buildPitchList();
+      this.refreshPitchList();
     }
     if (inp.justPressed("ArrowDown")) {
       this.pitchSel = (this.pitchSel + 1) % n;
-      this.buildPitchList();
+      this.refreshPitchList();
     }
     if (inp.justPressed("Space") || inp.justPressed("Enter")) {
-      this.pitchListC.visible = false;
+      this.pitchListData = null;
+      this.refreshHud();
       this.phase = "aim";
     }
   }
@@ -523,20 +504,14 @@ export class GameScene implements Scene {
     this.aim.x = Math.max(-1.6, Math.min(1.6, this.aim.x));
     this.aim.y = Math.max(-1.6, Math.min(1.6, this.aim.y));
 
-    const p = this.zoneToScreen(this.aim.x, this.aim.y);
-    this.aimG.clear();
-    this.aimG
-      .moveTo(p.x - 14, p.y)
-      .lineTo(p.x + 14, p.y)
-      .moveTo(p.x, p.y - 14)
-      .lineTo(p.x, p.y + 14)
-      .stroke({ width: 4, color: 0xff5252 });
-    this.aimG.circle(p.x, p.y, 10).stroke({ width: 3, color: 0xff5252 });
+    const w = this.zoneToWorld(this.aim.x, this.aim.y);
+    this.aimRing.position.set(w.x, w.y, WORLD.zoneZ + 0.06);
+    this.aimRing.visible = true;
 
     if (inp.justPressed("Space") || inp.justPressed("Enter")) {
       const pt = this.arsenal()[this.pitchSel] ?? "fastball";
       this.intent = { pitchType: pt, targetX: this.aim.x, targetY: this.aim.y };
-      this.aimG.clear();
+      this.aimRing.visible = false;
       const pitch = throwPitch(this.pitcher, this.intent, this.rng);
       // CPU batter decides as the ball leaves the hand
       this.swing = cpuSwingDecision(
@@ -554,15 +529,17 @@ export class GameScene implements Scene {
     this.pitch = pitch;
     this.flightT = 0;
     this.flightTime = 1.05 - pitch.speed * 0.45;
+    this.flightStart.copy(WORLD.release);
+    this.flightEnd.copy(this.zoneToWorld(pitch.x, pitch.y));
     const brk = pitchBreakVector(this.pitcher, pitch.pitchType);
-    this.breakScreen = { x: brk.dx * ZONE_SCALE, y: -brk.dy * ZONE_SCALE };
+    this.breakWorld = { x: brk.dx * BREAK_WORLD, y: brk.dy * BREAK_WORLD };
     this.flightTrace = [];
     this.pitchSeq += 1;
     this.phase = "flight";
     this.ball.visible = true;
-    this.ball.position.set(RELEASE.x, RELEASE.y);
-    this.ball.scale.set(0.45);
-    this.speedText.text = `${pitchSpeedKmh(this.pitcher, pitch.pitchType)} ${t("kmh")}`;
+    this.ball.position.copy(this.flightStart);
+    this.speedTextStr = `${pitchSpeedKmh(this.pitcher, pitch.pitchType)} ${t("kmh")}`;
+    this.refreshHud();
   }
 
   /** Move and draw the batting cursor; active whenever the player's side is at
@@ -577,16 +554,15 @@ export class GameScene implements Scene {
     this.cursor.x = Math.max(-1.5, Math.min(1.5, this.cursor.x));
     this.cursor.y = Math.max(-1.5, Math.min(1.5, this.cursor.y));
 
-    const c = this.zoneToScreen(this.cursor.x, this.cursor.y);
-    const r = cursorRadius(this.batter) * ZONE_SCALE * 0.78;
-    this.cursorG.clear();
-    this.cursorG.ellipse(c.x, c.y, r, r * 0.72).fill({ color: 0x4da6ff, alpha: 0.35 });
-    this.cursorG.ellipse(c.x, c.y, r, r * 0.72).stroke({ width: 3, color: 0x4da6ff });
+    const w = this.zoneToWorld(this.cursor.x, this.cursor.y);
+    const r = cursorRadius(this.batter) * WORLD.zoneUnit * 0.78;
+    this.cursorRing.position.set(w.x, w.y, WORLD.zoneZ + 0.06);
+    this.cursorRing.scale.set(r / 0.16, (r * 0.85) / 0.16, 1);
+    this.cursorRing.visible = true;
   }
 
   private updateFlight(): void {
     const inp = this.ctx.input;
-    const pitch = this.pitch!;
 
     if (this.playerIsBatting) {
       this.updateBattingCursor();
@@ -605,17 +581,17 @@ export class GameScene implements Scene {
 
     this.flightT += TICK;
     const k = Math.min(1, this.flightT / this.flightTime);
-    const start = RELEASE;
-    const end = this.zoneToScreen(pitch.x, pitch.y);
-    // the ball travels straight toward where it would cross without movement,
-    // and the break bends it onto the real location late (k²); fastballs have
-    // zero break and fly true
-    const brk = this.breakScreen;
+    const start = this.flightStart;
+    const end = this.flightEnd;
+    // the ball travels straight toward where it would cross without movement, and
+    // the break bends it onto the real location late (k²); fastballs have zero
+    // break and fly true. Perspective grows the ball as it nears the camera.
+    const brk = this.breakWorld;
     const late = k * k;
     const bx = start.x + (end.x - brk.x - start.x) * k + brk.x * late;
     const by = start.y + (end.y - brk.y - start.y) * k + brk.y * late;
-    this.ball.position.set(bx, by);
-    this.ball.scale.set(0.45 + k * 0.75);
+    const bz = start.z + (end.z - start.z) * k;
+    this.ball.position.set(bx, by, bz);
     this.flightTrace.push({ x: bx, y: by });
 
     // CPU batter starts its swing as the ball arrives
@@ -630,11 +606,10 @@ export class GameScene implements Scene {
   }
 
   private resolveCurrentPitch(): void {
-    const pitch = this.pitch!;
-    const ev = resolvePitch(this.batter, pitch, this.swing, this.rng);
+    const ev = resolvePitch(this.batter, this.pitch!, this.swing, this.rng);
     const play = applyPitch(this.state, ev);
     this.lastPlay = play;
-    this.cursorG.clear();
+    this.cursorRing.visible = false;
 
     // message
     let text: string;
@@ -647,7 +622,7 @@ export class GameScene implements Scene {
     } else {
       text = t("strike");
     }
-    this.msg.text = text;
+    this.msgText = text;
     this.refreshHud();
     this.phase = "result";
     this.timer = RESULT_WAIT_TICKS;
@@ -704,6 +679,7 @@ export class GameScene implements Scene {
   }
 
   debugState(): Record<string, unknown> {
+    const visible = this.ball.visible;
     return {
       phase: this.phase,
       score: [...this.state.score],
@@ -719,8 +695,8 @@ export class GameScene implements Scene {
       cursorX: this.cursor.x,
       cursorY: this.cursor.y,
       pitchType: this.pitch?.pitchType ?? null,
-      ballX: this.ball.visible ? this.ball.position.x : null,
-      ballY: this.ball.visible ? this.ball.position.y : null,
+      ballX: visible ? this.ball.position.x : null,
+      ballY: visible ? this.ball.position.y : null,
       pitchSeq: this.pitchSeq,
       flightTrace: [...this.flightTrace],
       gameOver: this.state.gameOver,

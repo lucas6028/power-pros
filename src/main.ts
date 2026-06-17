@@ -6,6 +6,7 @@ import { GameScene } from "./scenes/GameScene";
 import { ResultScene } from "./scenes/ResultScene";
 import { Input } from "./ui/input";
 import { installDebugApi } from "./ui/debug";
+import { ThreeStage } from "./render/three-stage";
 
 const LOGIC_HZ = 60;
 const LOGIC_DT = 1 / LOGIC_HZ;
@@ -19,13 +20,27 @@ async function boot(): Promise<void> {
     background: 0x1a1a2e,
     antialias: true,
   });
+  app.canvas.style.position = "absolute";
   document.body.appendChild(app.canvas);
 
-  // letterbox-scale the fixed logical resolution to the window
+  // WebGL host for the 3D game scene + its DOM HUD overlay, layered above Pixi
+  const three = new ThreeStage();
+  document.body.appendChild(three.renderer.domElement);
+  document.body.appendChild(three.overlay);
+
+  // letterbox-scale the fixed logical resolution to the window; the Pixi canvas,
+  // the WebGL canvas, and the HUD overlay all share the exact same rect
   const fit = (): void => {
     const scale = Math.min(window.innerWidth / GAME_W, window.innerHeight / GAME_H);
-    app.canvas.style.width = `${Math.floor(GAME_W * scale)}px`;
-    app.canvas.style.height = `${Math.floor(GAME_H * scale)}px`;
+    const w = Math.floor(GAME_W * scale);
+    const h = Math.floor(GAME_H * scale);
+    const left = Math.floor((window.innerWidth - w) / 2);
+    const top = Math.floor((window.innerHeight - h) / 2);
+    app.canvas.style.left = `${left}px`;
+    app.canvas.style.top = `${top}px`;
+    app.canvas.style.width = `${w}px`;
+    app.canvas.style.height = `${h}px`;
+    three.layout(left, top, w, h);
   };
   fit();
   window.addEventListener("resize", fit);
@@ -34,7 +49,7 @@ async function boot(): Promise<void> {
   app.stage.addChild(stage);
 
   const input = new Input();
-  const scenes = new SceneManager(stage, input);
+  const scenes = new SceneManager(stage, three, input);
   scenes.register(new TitleScene());
   scenes.register(new TeamSelectScene());
   scenes.register(new GameScene());
@@ -57,6 +72,8 @@ async function boot(): Promise<void> {
       scenes.update(LOGIC_DT);
       accumulator -= LOGIC_DT;
     }
+    // 3D scenes drive their own WebGL renderer once per animation frame
+    scenes.currentScene?.render?.();
   });
 }
 
