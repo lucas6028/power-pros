@@ -60,12 +60,51 @@ export function buildField(): THREE.Group {
     g.add(stripe);
   }
 
-  // infield dirt: big skinned arc around home, plus the bare batter's circle
-  const infield = ground(new THREE.CircleGeometry(13, 48), COLORS.dirt, 0.01);
-  infield.position.z = -8;
+  // Infield skin shaped as a dirt diamond so the mound reads as the *centre* of
+  // the infield with second base behind the pitcher — not at the back edge where
+  // it used to look like the pitcher was standing on second. Base positions are
+  // an arcade-compressed real diamond: home at the origin, the mound at
+  // WORLD.moundZ (~−16), second base well beyond it. A Shape point (sx, sy) maps
+  // to world (sx, 0, −sy) after the −90° lay-flat rotation.
+  const skin = new THREE.Shape();
+  skin.moveTo(0, -2.5); // home-plate corner (world z = +2.5)
+  skin.lineTo(16, 13); // first-base corner (world 16, −13)
+  skin.lineTo(0, 29.5); // second-base corner (world 0, −29.5)
+  skin.lineTo(-16, 13); // third-base corner (world −16, −13)
+  skin.closePath();
+  const infield = new THREE.Mesh(
+    new THREE.ShapeGeometry(skin),
+    new THREE.MeshLambertMaterial({ color: COLORS.dirt }),
+  );
+  infield.rotation.x = -Math.PI / 2;
+  infield.position.y = 0.01;
   g.add(infield);
+  // dirt circle around home so the batter's/catcher's area stays skinned
+  const homeDirt = ground(new THREE.CircleGeometry(5, 32), COLORS.dirt, 0.011);
+  g.add(homeDirt);
 
-  // pitcher's mound
+  // foul lines: chalk running from home out past first and third base
+  const chalk = new THREE.LineBasicMaterial({ color: COLORS.white });
+  for (const sx of [-1, 1]) {
+    const pts = [new THREE.Vector3(0, 0.04, 0), new THREE.Vector3(sx * 30, 0.04, -30)];
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), chalk));
+  }
+
+  // bases: white bags at first / second / third (second sits behind the mound)
+  const baseMat = new THREE.MeshLambertMaterial({ color: COLORS.white });
+  const baseSpots: Array<[number, number]> = [
+    [13, -13],
+    [0, -26],
+    [-13, -13],
+  ];
+  for (const [bx, bz] of baseSpots) {
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.6), baseMat);
+    bag.rotation.y = Math.PI / 4; // diamond-oriented bag
+    bag.position.set(bx, 0.05, bz);
+    g.add(bag);
+  }
+
+  // pitcher's mound — centred in the infield, second base visible behind it
   const mound = new THREE.Mesh(
     new THREE.CylinderGeometry(2.4, 2.8, 0.3, 32),
     new THREE.MeshLambertMaterial({ color: COLORS.dirtDark }),
