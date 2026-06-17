@@ -200,7 +200,7 @@ interface SwingPose {
 const SWING: { t: number; p: SwingPose }[] = [
   // 構え: bat stood up beside the back ear, off the plate (matches the idle rest
   // pose in makeBat — batZ tucks the barrel toward the head, not across the zone)
-  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.45, batZ: 0.15 } },
+  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.3, batZ: -0.55 } },
   // 抬腳 + 引棒: front knee up, hands load back, the barrel cocks a touch higher
   // and further behind the back shoulder (batY winds back, batZ eases up)
   {

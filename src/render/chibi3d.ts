@@ -400,12 +400,13 @@ function makeBat(dir: number): THREE.Group {
   tip.position.y = 1.14;
   bat.add(tip);
 
-  // stood up beside the back ear, tilted back over the shoulder — NOT laid across
-  // the plate (a positive batZ tucks the barrel toward the head/rear, off the
-  // strike zone). Matches the swing's t=0 rest pose so the bat doesn't pop when a
-  // swing starts (see SWING in GameScene).
-  bat.rotation.z = dir * 0.15;
-  bat.rotation.x = 0.45;
+  // Stood up off the back shoulder and canted toward the camera so the whole shaft
+  // clears the oversized chibi head (otherwise the head occludes the bat's middle
+  // from the behind-the-plate view, splitting it into a floating barrel + handle).
+  // Matches the swing's t=0 rest pose so the bat doesn't pop when a swing starts
+  // (see SWING in GameScene).
+  bat.rotation.z = dir * -0.55;
+  bat.rotation.x = 0.3;
   return bat;
 }
 
