@@ -198,8 +198,9 @@ interface SwingPose {
  * (and from the batter's eyes) — i.e. real swings that pull toward their own pull
  * field, not mirror-reversed. */
 const SWING: { t: number; p: SwingPose }[] = [
-  // 構え: bat cocked up over the back shoulder (matches the idle rest pose)
-  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: -0.5 } },
+  // 構え: bat stood up beside the back ear, off the plate (matches the idle rest
+  // pose in makeBat — batZ tucks the barrel toward the head, not across the zone)
+  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.45, batZ: 0.15 } },
   // 抬腳 + 引棒: front knee up, hands load back, the barrel cocks a touch higher
   // and further behind the back shoulder (batY winds back, batZ eases up)
   {
