@@ -277,31 +277,26 @@ function headWithCap(colors: ChibiColors, facing: 1 | -1, helmet: boolean): THRE
   }
 
   // face: big eyes (dark ring + white + iris + catchlight), blush and a small
-  // mouth — only on the camera-facing side (pitcher / menus)
-  if (facing > 0) {
-    const z = HEAD_R * 0.92;
-    const eyeY = HEAD_Y - 0.04; // lower-front of the face, below the cap brim
-    for (const sx of [-1, 1]) {
-      const ring = decal(0.105, OUTLINE, 0.8, 1.12);
-      ring.position.set(sx * 0.17, eyeY, z);
-      g.add(ring);
-      const white = decal(0.088, 0xffffff, 0.8, 1.12);
-      white.position.set(sx * 0.17, eyeY, z + 0.004);
-      g.add(white);
-      const iris = decal(0.055, EYE_IRIS, 0.92, 1.05, 18);
-      iris.position.set(sx * 0.17, eyeY - 0.018, z + 0.008);
-      g.add(iris);
-      const cat = decal(0.02, 0xffffff, 1, 1, 10);
-      cat.position.set(sx * 0.17 - 0.022, eyeY + 0.022, z + 0.012);
-      g.add(cat);
-      const blush = decal(0.05, BLUSH, 1.2, 0.7, 14);
-      blush.position.set(sx * 0.27, eyeY - 0.13, z - 0.04);
-      g.add(blush);
-    }
-    const mouth = decal(0.032, MOUTH, 1.5, 0.7, 12);
-    mouth.position.set(0, eyeY - 0.15, HEAD_R * 0.88);
-    g.add(mouth);
+  // mouth — drawn on the head's FRONT (the brim/look direction): +Z for the
+  // pitcher/menus, −Z for the batter, who looks up the line toward the pitcher.
+  // Decals are flat discs that paint toward +Z, so the batter's are spun to face
+  // −Z and pushed to the −Z side of the head.
+  const z = facing * HEAD_R * 0.92;
+  const faceYaw = facing < 0 ? Math.PI : 0; // turn the discs to look along the brim
+  const eyeY = HEAD_Y - 0.04; // lower-front of the face, below the cap brim
+  const place = (d: THREE.Mesh, x: number, y: number, zz: number): void => {
+    d.position.set(x, y, zz);
+    d.rotation.y = faceYaw;
+    g.add(d);
+  };
+  for (const sx of [-1, 1]) {
+    place(decal(0.105, OUTLINE, 0.8, 1.12), sx * 0.17, eyeY, z);
+    place(decal(0.088, 0xffffff, 0.8, 1.12), sx * 0.17, eyeY, z + facing * 0.004);
+    place(decal(0.055, EYE_IRIS, 0.92, 1.05, 18), sx * 0.17, eyeY - 0.018, z + facing * 0.008);
+    place(decal(0.02, 0xffffff, 1, 1, 10), sx * 0.17 - 0.022, eyeY + 0.022, z + facing * 0.012);
+    place(decal(0.05, BLUSH, 1.2, 0.7, 14), sx * 0.27, eyeY - 0.13, z - facing * 0.04);
   }
+  place(decal(0.032, MOUTH, 1.5, 0.7, 12), 0, eyeY - 0.15, facing * HEAD_R * 0.88);
 
   return g;
 }
@@ -446,6 +441,11 @@ export function makeChibiBatter(colors: ChibiColors, batsLeft: boolean): THREE.G
 
   const head = headWithCap(colors, -1, true);
   head.position.y = -hip; // re-base absolute head positions onto the hip pivot
+  // The body is bladed toward the plate (see the group turn below); swivel the
+  // head most of the way back off the chest so the batter watches the pitcher up
+  // the line. From the behind-the-plate camera that shows the back/side of the
+  // helmet with the face only peeking in profile. Sign follows the bat hand.
+  head.rotation.y = dir * 1.1;
   body.add(head);
 
   // short jersey sleeves at both shoulders
