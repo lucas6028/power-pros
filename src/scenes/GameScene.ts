@@ -46,8 +46,9 @@ type Phase = "preparePitch" | "selectPitch" | "aim" | "windup" | "flight" | "res
 const TICK = 1 / 60;
 /** Swing animation length in logic ticks. */
 const SWING_TICKS = 24;
-/** Pitching wind-up length in logic ticks: raise → hold → snap forward. */
-const WINDUP_TICKS = 48;
+/** Pitching delivery length in logic ticks: gather → leg lift → stride →
+ * arm whip → release (~1.2 s at 60 Hz). */
+const WINDUP_TICKS = 72;
 /** Minimum pause after every pitch resolves before the next one (5 s at 60 Hz). */
 const RESULT_WAIT_TICKS = 300;
 
@@ -65,6 +66,124 @@ const PITCH_NAMES: Record<PitchTypeId, string> = {
   sinker: "伸卡球",
   changeup: "變速球",
 };
+
+/** One frame of the pitching delivery (all rotations in radians; armX rotates
+ * the throwing arm about its shoulder, so the hand swings a vertical circle). */
+interface PitcherPose {
+  frontLeg: number; // lead-leg hip lift
+  frontShin: number; // lead-leg knee bend
+  backLeg: number; // drive-leg hip
+  backShin: number; // drive-leg knee bend
+  bodyX: number; // trunk lean (forward +)
+  bodyY: number; // trunk twist (coil −)
+  armX: number; // throwing arm: + back/down, − up/over-the-top
+  strideZ: number; // step toward the plate (+Z)
+  sink: number; // hip drop
+}
+
+/** Key poses of the delivery across normalized time t∈[0,1]:
+ * set → leg lift / gather → stride & plant → arm whip over the top → release. */
+const DELIVERY: { t: number; p: PitcherPose }[] = [
+  {
+    t: 0,
+    p: {
+      frontLeg: 0,
+      frontShin: 0,
+      backLeg: 0,
+      backShin: 0,
+      bodyX: 0,
+      bodyY: 0,
+      armX: 0,
+      strideZ: 0,
+      sink: 0,
+    },
+  },
+  {
+    t: 0.3,
+    p: {
+      frontLeg: -1.5,
+      frontShin: 1.4,
+      backLeg: 0,
+      backShin: 0.25,
+      bodyX: -0.12,
+      bodyY: -0.45,
+      armX: 0.5,
+      strideZ: 0,
+      sink: 0.03,
+    },
+  },
+  {
+    t: 0.5,
+    p: {
+      frontLeg: -1.6,
+      frontShin: 1.5,
+      backLeg: 0,
+      backShin: 0.3,
+      bodyX: -0.15,
+      bodyY: -0.55,
+      armX: 0.3,
+      strideZ: 0.05,
+      sink: 0.04,
+    },
+  },
+  {
+    t: 0.72,
+    p: {
+      frontLeg: -0.4,
+      frontShin: 0.15,
+      backLeg: 0,
+      backShin: 0.1,
+      bodyX: 0.0,
+      bodyY: -0.15,
+      armX: -2.6,
+      strideZ: 0.55,
+      sink: 0.0,
+    },
+  },
+  {
+    t: 1.0,
+    p: {
+      frontLeg: -0.45,
+      frontShin: 0.0,
+      backLeg: 0.9,
+      backShin: 0.5,
+      bodyX: 0.32,
+      bodyY: 0.2,
+      armX: -0.9,
+      strideZ: 0.8,
+      sink: 0.02,
+    },
+  },
+];
+
+const smoothstep = (u: number): number => u * u * (3 - 2 * u);
+
+/** Interpolate the delivery pose at normalized time t. */
+function deliveryPose(t: number): PitcherPose {
+  let a = DELIVERY[0]!;
+  let b = DELIVERY[DELIVERY.length - 1]!;
+  for (let i = 0; i < DELIVERY.length - 1; i++) {
+    if (t >= DELIVERY[i]!.t && t <= DELIVERY[i + 1]!.t) {
+      a = DELIVERY[i]!;
+      b = DELIVERY[i + 1]!;
+      break;
+    }
+  }
+  const span = b.t - a.t || 1;
+  const u = smoothstep(Math.max(0, Math.min(1, (t - a.t) / span)));
+  const mix = (x: number, y: number): number => x + (y - x) * u;
+  return {
+    frontLeg: mix(a.p.frontLeg, b.p.frontLeg),
+    frontShin: mix(a.p.frontShin, b.p.frontShin),
+    backLeg: mix(a.p.backLeg, b.p.backLeg),
+    backShin: mix(a.p.backShin, b.p.backShin),
+    bodyX: mix(a.p.bodyX, b.p.bodyX),
+    bodyY: mix(a.p.bodyY, b.p.bodyY),
+    armX: mix(a.p.armX, b.p.armX),
+    strideZ: mix(a.p.strideZ, b.p.strideZ),
+    sink: mix(a.p.sink, b.p.sink),
+  };
+}
 
 export class GameScene implements Scene {
   readonly name = "game";
@@ -112,6 +231,12 @@ export class GameScene implements Scene {
   private pitcher3d: THREE.Group | null = null;
   private pitcherArm: THREE.Object3D | null = null;
   private pitcherArmBall: THREE.Object3D | null = null;
+  private pitcherBody: THREE.Object3D | null = null;
+  private pitcherFrontLeg: THREE.Object3D | null = null;
+  private pitcherFrontShin: THREE.Object3D | null = null;
+  private pitcherBackLeg: THREE.Object3D | null = null;
+  private pitcherBackShin: THREE.Object3D | null = null;
+  private pitcherRestZ = WORLD.moundZ + 0.3;
   private batter3d: THREE.Group | null = null;
   private batterBat: THREE.Object3D | null = null;
   private charLayer = new THREE.Group();
@@ -279,10 +404,16 @@ export class GameScene implements Scene {
     this.charLayer.clear();
 
     this.pitcher3d = makeChibiPitcher(this.hexColors(this.fieldingTeam));
-    this.pitcher3d.scale.setScalar(1.7); // larger so the wind-up reads at distance
-    this.pitcher3d.position.set(0, PITCHER_BASE_Y, WORLD.moundZ + 0.3);
-    this.pitcherArm = this.pitcher3d.getObjectByName("arm") ?? null;
+    this.pitcher3d.scale.setScalar(2.4); // larger so the delivery reads at distance
+    this.pitcher3d.position.set(0, PITCHER_BASE_Y, this.pitcherRestZ);
+    const grab = (n: string): THREE.Object3D | null => this.pitcher3d!.getObjectByName(n) ?? null;
+    this.pitcherArm = grab("arm");
     this.pitcherArmBall = this.pitcherArm?.getObjectByName("armBall") ?? null;
+    this.pitcherBody = grab("body");
+    this.pitcherFrontLeg = grab("frontLeg");
+    this.pitcherFrontShin = grab("frontShin");
+    this.pitcherBackLeg = grab("backLeg");
+    this.pitcherBackShin = grab("backShin");
     this.charLayer.add(this.pitcher3d);
 
     const batsLeft = this.batter.bats === "L";
@@ -347,13 +478,28 @@ export class GameScene implements Scene {
         break;
     }
     this.updateSwingAnimation();
-    // after the release, the pitcher eases back to the set position
-    if (this.phase !== "windup" && this.pitcherArm && this.pitcher3d) {
-      this.pitcherArm.rotation.x *= 0.88;
-      this.pitcher3d.rotation.x *= 0.88;
+    // after the release, the pitcher recovers from the follow-through to the set
+    if (this.phase !== "windup") this.recoverPitcher();
+  }
+
+  /** Ease every animated joint of the delivery back toward its rest pose. */
+  private recoverPitcher(): void {
+    const ease = (o: THREE.Object3D | null): void => {
+      if (!o) return;
+      o.rotation.x *= 0.85;
+      o.rotation.y *= 0.85;
+      if (Math.abs(o.rotation.x) < 0.01) o.rotation.x = 0;
+      if (Math.abs(o.rotation.y) < 0.01) o.rotation.y = 0;
+    };
+    ease(this.pitcherArm);
+    ease(this.pitcherBody);
+    ease(this.pitcherFrontLeg);
+    ease(this.pitcherFrontShin);
+    ease(this.pitcherBackLeg);
+    ease(this.pitcherBackShin);
+    if (this.pitcher3d) {
       this.pitcher3d.position.y += (PITCHER_BASE_Y - this.pitcher3d.position.y) * 0.15;
-      if (Math.abs(this.pitcherArm.rotation.x) < 0.02) this.pitcherArm.rotation.x = 0;
-      if (Math.abs(this.pitcher3d.rotation.x) < 0.005) this.pitcher3d.rotation.x = 0;
+      this.pitcher3d.position.z += (this.pitcherRestZ - this.pitcher3d.position.z) * 0.15;
     }
   }
 
@@ -365,35 +511,30 @@ export class GameScene implements Scene {
     if (this.pitcherArmBall) this.pitcherArmBall.visible = true;
   }
 
-  /** Raise the throwing arm overhead, hold, then snap forward and release. */
+  /** Drive the full delivery: gather, leg lift, stride toward the plate, trunk
+   * rotation and the arm whipping over the top, then release at the end. */
   private updateWindup(): void {
     if (this.playerIsBatting) this.updateBattingCursor();
 
     this.windupTicks -= 1;
     const t = 1 - this.windupTicks / WINDUP_TICKS;
-    let armRot: number;
-    let lean: number;
-    let crouch: number;
-    if (t < 0.45) {
-      const k = t / 0.45;
-      armRot = -2.4 * k;
-      lean = -0.07 * k;
-      crouch = 5 * k;
-    } else if (t < 0.7) {
-      armRot = -2.4; // set at the top
-      lean = -0.07;
-      crouch = 5;
-    } else {
-      const k = (t - 0.7) / 0.3;
-      armRot = -2.4 + 3.1 * k; // snap through to the follow-through
-      lean = -0.07 + 0.18 * k;
-      crouch = 5 - 9 * k; // push off the rubber
+    const p = deliveryPose(t);
+
+    if (this.pitcherFrontLeg) this.pitcherFrontLeg.rotation.x = p.frontLeg;
+    if (this.pitcherFrontShin) this.pitcherFrontShin.rotation.x = p.frontShin;
+    if (this.pitcherBackLeg) this.pitcherBackLeg.rotation.x = p.backLeg;
+    if (this.pitcherBackShin) this.pitcherBackShin.rotation.x = p.backShin;
+    if (this.pitcherBody) {
+      this.pitcherBody.rotation.x = p.bodyX;
+      this.pitcherBody.rotation.y = p.bodyY;
     }
-    if (this.pitcherArm) this.pitcherArm.rotation.x = armRot;
+    if (this.pitcherArm) this.pitcherArm.rotation.x = p.armX;
     if (this.pitcher3d) {
-      this.pitcher3d.rotation.x = lean;
-      this.pitcher3d.position.y = PITCHER_BASE_Y + crouch * 0.012;
+      this.pitcher3d.position.y = PITCHER_BASE_Y + p.sink;
+      this.pitcher3d.position.z = this.pitcherRestZ + p.strideZ;
     }
+    // the ball leaves the hand as the arm reaches extension out front
+    if (this.pitcherArmBall && t >= 0.82) this.pitcherArmBall.visible = false;
 
     if (this.windupTicks <= 0) {
       if (this.pitcherArmBall) this.pitcherArmBall.visible = false;
