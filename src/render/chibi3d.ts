@@ -125,23 +125,78 @@ function headWithCap(colors: ChibiColors, facing: 1 | -1, helmet: boolean): THRE
   return g;
 }
 
-/** Pitcher: faces +Z (toward the batter/camera). The throwing arm is a named
- * pivot ("arm") at the shoulder, holding a ball ("armBall", hidden by default). */
+/** Hip height of the pitcher rig: legs pivot here and the upper body pivots here
+ * so the GameScene can drive a real pitching delivery (leg lift, stride, trunk
+ * rotation, arm whip). */
+const PITCHER_HIP_Y = 0.42;
+
+/** One pitcher leg: a thigh on a hip pivot and a shin/foot on a knee pivot. The
+ * returned shin group is named so the knee can be bent independently. */
+function pitcherLeg(shinName: string): THREE.Group {
+  const leg = new THREE.Group(); // pivot at the hip
+  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.18, 6, 12), toon(PANTS));
+  thigh.position.y = -0.12;
+  leg.add(thigh);
+
+  const shin = new THREE.Group(); // pivot at the knee
+  shin.name = shinName;
+  shin.position.y = -0.24;
+  const calf = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.16, 6, 12), toon(PANTS));
+  calf.position.y = -0.1;
+  shin.add(calf);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.07, 0.24), toon(OUTLINE));
+  foot.position.set(0, -0.21, 0.05);
+  shin.add(foot);
+  leg.add(shin);
+
+  return leg;
+}
+
+/** Pitcher: faces +Z (toward the batter/camera). A small rig the GameScene
+ * animates into a full delivery — named pivots: "frontLeg"/"backLeg" (with
+ * "frontShin"/"backShin" knees), "body" (trunk lean + twist), and "arm" (the
+ * throwing arm at the shoulder) holding "armBall" (hidden by default). */
 export function makeChibiPitcher(colors: ChibiColors): THREE.Group {
   const g = new THREE.Group();
-  g.add(lowerBody(colors));
-  g.add(headWithCap(colors, 1, false));
+  const hip = PITCHER_HIP_Y;
+
+  // legs (hip pivots), planted at rest
+  const backLeg = pitcherLeg("backShin");
+  backLeg.name = "backLeg";
+  backLeg.position.set(-0.17, hip, -0.04);
+  g.add(backLeg);
+
+  const frontLeg = pitcherLeg("frontShin");
+  frontLeg.name = "frontLeg";
+  frontLeg.position.set(0.17, hip, 0.04);
+  g.add(frontLeg);
+
+  // upper body pivots at the hips so it can lean and twist over the legs
+  const body = new THREE.Group();
+  body.name = "body";
+  body.position.set(0, hip, 0);
+
+  const torso = outlined(new THREE.BoxGeometry(0.64, 0.58, 0.38), colors.jersey);
+  torso.position.set(0, 0.66 - hip, 0);
+  body.add(torso);
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.1, 0.4), toon(colors.trim));
+  belt.position.set(0, 0.4 - hip, 0);
+  body.add(belt);
+
+  const head = headWithCap(colors, 1, false);
+  head.position.y = -hip; // re-base absolute head positions onto the hip pivot
+  body.add(head);
 
   // glove arm (static), on the figure's left
   const glove = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.34, 6, 12), toon(SKIN));
-  glove.position.set(-0.4, 0.7, 0.04);
+  glove.position.set(-0.4, 0.7 - hip, 0.04);
   glove.rotation.z = 0.5;
-  g.add(glove);
+  body.add(glove);
 
   // throwing arm: pivot at the right shoulder, hangs down at rest
   const arm = new THREE.Group();
   arm.name = "arm";
-  arm.position.set(0.38, 0.92, 0);
+  arm.position.set(0.38, 0.92 - hip, 0);
   const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.34, 6, 12), toon(SKIN));
   upper.position.set(0, -0.22, 0);
   arm.add(upper);
@@ -153,8 +208,9 @@ export function makeChibiPitcher(colors: ChibiColors): THREE.Group {
   armBall.position.set(0, -0.5, 0.06);
   armBall.visible = false;
   arm.add(armBall);
-  g.add(arm);
+  body.add(arm);
 
+  g.add(body);
   return g;
 }
 
