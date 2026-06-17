@@ -185,23 +185,24 @@ function buildTorso(body: THREE.Group, colors: ChibiColors, hip: number, facing:
   belt.position.set(0, 0.4 - hip, 0);
   body.add(belt);
 
-  if (facing > 0) {
-    // chest: a placket stripe down the front + a white team patch
-    const placket = new THREE.Mesh(
-      new RoundedBoxGeometry(0.07, 0.46, 0.04, 2, 0.02),
-      toon(colors.trim),
-    );
-    placket.position.set(0, 0.66 - hip, 0.212);
-    body.add(placket);
-    const patch = outlined(new RoundedBoxGeometry(0.2, 0.2, 0.04, 3, 0.05), 0xffffff, 0.01);
-    patch.position.set(0, 0.7 - hip, 0.206);
-    body.add(patch);
-  } else {
-    // back: white number plate (faces the camera behind the batter)
-    const plate = outlined(new RoundedBoxGeometry(0.32, 0.36, 0.05, 3, 0.04), 0xffffff, 0.01);
-    plate.position.set(0, 0.72 - hip, 0.21);
-    body.add(plate);
-  }
+  // Jersey FRONT (placket stripe + buttons down the chest, plus a white team
+  // patch) goes on the `facing` side; the number plate goes on the opposite back.
+  // The chest faces +Z for the pitcher and −Z for the batter — whose bladed stance
+  // then turns it toward home plate — so anchoring to `facing` keeps the buttons on
+  // the plate side and the number behind for both.
+  const placket = new THREE.Mesh(
+    new RoundedBoxGeometry(0.07, 0.46, 0.04, 2, 0.02),
+    toon(colors.trim),
+  );
+  placket.position.set(0, 0.66 - hip, facing * 0.212);
+  body.add(placket);
+  const patch = outlined(new RoundedBoxGeometry(0.2, 0.2, 0.04, 3, 0.05), 0xffffff, 0.01);
+  patch.position.set(0, 0.7 - hip, facing * 0.206);
+  body.add(patch);
+
+  const plate = outlined(new RoundedBoxGeometry(0.32, 0.36, 0.05, 3, 0.04), 0xffffff, 0.01);
+  plate.position.set(0, 0.72 - hip, facing * -0.21);
+  body.add(plate);
 }
 
 /** Head with cap; `facing` is +1 to face +Z (camera) or −1 to face −Z (pitcher).
