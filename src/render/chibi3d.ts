@@ -245,15 +245,20 @@ function headWithCap(colors: ChibiColors, facing: 1 | -1, helmet: boolean): THRE
   g.add(btn);
 
   if (!helmet) {
-    // curved ball-cap brim jutting toward the face side, above the eyes
+    // flat ball-cap brim: a thin half-disc lying horizontal (thickness along Y),
+    // its curved edge jutting FORWARD the way the face looks and dipped slightly
+    // down, the straight edge hidden inside the crown above the eyes. The half-
+    // disc is cut so it natively bulges toward the facing side (theta swept
+    // symmetrically about ±Z) — no upright rotation, which is what put the old
+    // brim across the face.
+    const start = facing > 0 ? -Math.PI / 2 : Math.PI / 2;
     const brim = outlined(
-      new THREE.CylinderGeometry(0.23, 0.23, 0.05, 24, 1, false, 0, Math.PI),
+      new THREE.CylinderGeometry(0.24, 0.24, 0.05, 24, 1, false, start, Math.PI),
       colors.cap,
       0.012,
     );
-    brim.position.set(0, HEAD_Y + 0.055, facing * (HEAD_R + 0.02));
-    brim.rotation.x = Math.PI / 2;
-    brim.rotation.z = facing > 0 ? 0 : Math.PI;
+    brim.rotation.x = facing * 0.22; // dip the leading edge down a touch
+    brim.position.set(0, HEAD_Y + 0.06, facing * 0.3);
     g.add(brim);
   } else {
     // batting-helmet ear flaps + a front-to-back ridge
