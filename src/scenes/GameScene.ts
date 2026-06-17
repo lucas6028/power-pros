@@ -185,41 +185,51 @@ interface SwingPose {
  * level through the zone → follow-through wrapping around. */
 const SWING: { t: number; p: SwingPose }[] = [
   { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: 0.5 } },
-  // 抬腳 + 引棒: front knee up, hands load back, shoulders coil toward the catcher
+  // 抬腳 + 引棒: front knee up, hands load back, the bat cocks high over the back
+  // shoulder (large batZ roll) so it has a long way to travel
   {
     t: 0.24,
     p: {
       frontLeg: -0.7,
       frontShin: 0.6,
-      bodyY: 0.32,
-      bodyX: -0.05,
-      batY: 0.4,
-      batX: 0.5,
-      batZ: 0.6,
+      bodyY: 0.34,
+      bodyX: -0.06,
+      batY: 0.2,
+      batX: 0.55,
+      batZ: 1.15,
     },
   },
-  // stride down, hips begin to fire open
+  // stride down, hips begin to fire, the barrel starts dropping into the slot
   {
     t: 0.42,
-    p: { frontLeg: -0.1, frontShin: 0.1, bodyY: -0.2, bodyX: 0.0, batY: 0.1, batX: 0.3, batZ: 0.4 },
+    p: {
+      frontLeg: -0.1,
+      frontShin: 0.1,
+      bodyY: -0.1,
+      bodyX: 0.0,
+      batY: 0.0,
+      batX: 0.25,
+      batZ: 0.2,
+    },
   },
-  // 轉身 + 揮擊: trunk fully rotated, bat whips level through the zone (contact)
+  // 轉身 + 揮擊: trunk fully rotated and the bat WHIPS across the screen — batZ
+  // rolls hard through the zone (this is the axis that reads from behind)
   {
-    t: 0.64,
+    t: 0.62,
     p: {
       frontLeg: 0.05,
       frontShin: 0,
-      bodyY: -0.78,
-      bodyX: 0.07,
-      batY: -1.7,
-      batX: 0.0,
-      batZ: 0.15,
+      bodyY: -0.72,
+      bodyX: 0.08,
+      batY: -0.35,
+      batX: -0.05,
+      batZ: -1.7,
     },
   },
-  // follow-through, bat wraps around the body
+  // follow-through, the bat wraps all the way around to the other side
   {
     t: 1.0,
-    p: { frontLeg: 0, frontShin: 0, bodyY: -0.98, bodyX: 0.04, batY: -2.6, batX: -0.1, batZ: 0.0 },
+    p: { frontLeg: 0, frontShin: 0, bodyY: -0.98, bodyX: 0.05, batY: -0.7, batX: -0.2, batZ: -2.9 },
   },
 ];
 
