@@ -209,6 +209,12 @@ function makeBat(dir: number): THREE.Group {
   barrel.position.y = 0.74;
   bat.add(barrel);
 
+  // marker at the end of the barrel so the GameScene can trace the swing arc
+  const tip = new THREE.Object3D();
+  tip.name = "batTip";
+  tip.position.y = 1.14;
+  bat.add(tip);
+
   bat.rotation.z = dir * 0.5;
   bat.rotation.x = 0.35;
   return bat;
