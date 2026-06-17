@@ -126,11 +126,17 @@ export function buildField(): THREE.Group {
   topLine.position.set(0, 4, -62);
   g.add(topLine);
 
-  // lighting
-  g.add(new THREE.AmbientLight(0xffffff, 1.35));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+  // lighting: a softer ambient floor (down from a flat 1.35) lets the key light
+  // carve a clean cel shadow on the toon-shaded chibis, while a cool rim from
+  // behind home keeps the shadow side from going dead and lifts the figures off
+  // the field.
+  g.add(new THREE.AmbientLight(0xffffff, 0.8));
+  const sun = new THREE.DirectionalLight(0xfff4e2, 1.35);
   sun.position.set(-8, 20, 6);
   g.add(sun);
+  const rim = new THREE.DirectionalLight(0xcfe8ff, 0.4);
+  rim.position.set(7, 9, 10);
+  g.add(rim);
 
   return g;
 }
