@@ -189,12 +189,17 @@ interface SwingPose {
  * LEVEL around the body through the zone → follow-through wrapping around.
  *
  * The barrel travels a near-horizontal arc (a rotational swing), not a vertical
- * chop: batZ stays positive to keep the bat laid into a level plane while batY
- * carries the big azimuth sweep. Through contact (t≈0.55–0.65) the barrel is
- * roughly level (~20° up for a touch of uppercut) and points at the pitcher. */
+ * chop: batZ keeps the bat laid into a level plane while batY carries the big
+ * azimuth sweep. Through contact (t≈0.55–0.65) the barrel is roughly level (~20°
+ * up for a touch of uppercut) and points at the pitcher.
+ *
+ * Sweep sense: with the ×dir applied at apply time this rotates a right-handed
+ * batter counter-clockwise and a left-handed batter clockwise as seen from above
+ * (and from the batter's eyes) — i.e. real swings that pull toward their own pull
+ * field, not mirror-reversed. */
 const SWING: { t: number; p: SwingPose }[] = [
   // 構え: bat cocked up over the back shoulder (matches the idle rest pose)
-  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: 0.5 } },
+  { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: -0.5 } },
   // 抬腳 + 引棒: front knee up, hands load back, the barrel cocks a touch higher
   // and further behind the back shoulder (batY winds back, batZ eases up)
   {
@@ -202,15 +207,15 @@ const SWING: { t: number; p: SwingPose }[] = [
     p: {
       frontLeg: -0.7,
       frontShin: 0.6,
-      bodyY: 0.34,
+      bodyY: -0.34,
       bodyX: -0.06,
-      batY: 0.7,
+      batY: -0.7,
       batX: 0.1,
-      batZ: 0.45,
+      batZ: -0.45,
     },
   },
   // stride down, hips begin to fire, the barrel lays DOWN off vertical into a flat
-  // swing plane (batZ grows) — loaded to sweep, not to drop on the ball
+  // swing plane (|batZ| grows) — loaded to sweep, not to drop on the ball
   {
     t: 0.4,
     p: {
@@ -218,9 +223,9 @@ const SWING: { t: number; p: SwingPose }[] = [
       frontShin: 0.1,
       bodyY: 0.0,
       bodyX: 0.02,
-      batY: 0.2,
+      batY: -0.2,
       batX: 0.05,
-      batZ: 0.95,
+      batZ: -0.95,
     },
   },
   // 轉身 + 揮擊: trunk rotates open and the barrel SWEEPS LEVEL around the body and
@@ -230,11 +235,11 @@ const SWING: { t: number; p: SwingPose }[] = [
     p: {
       frontLeg: 0.05,
       frontShin: 0,
-      bodyY: -0.78,
+      bodyY: 0.78,
       bodyX: 0.1,
-      batY: -0.95,
+      batY: 0.95,
       batX: -0.05,
-      batZ: 1.3,
+      batZ: -1.3,
     },
   },
   // 振り抜き: extension out front, the barrel keeps sweeping around still on-plane
@@ -243,17 +248,17 @@ const SWING: { t: number; p: SwingPose }[] = [
     p: {
       frontLeg: 0.05,
       frontShin: 0,
-      bodyY: -1.0,
+      bodyY: 1.0,
       bodyX: 0.06,
-      batY: -1.7,
+      batY: 1.7,
       batX: -0.1,
-      batZ: 1.15,
+      batZ: -1.15,
     },
   },
   // follow-through: the bat wraps around to the far side and rises
   {
     t: 1.0,
-    p: { frontLeg: 0, frontShin: 0, bodyY: -1.12, bodyX: 0.05, batY: -2.3, batX: -0.15, batZ: 0.8 },
+    p: { frontLeg: 0, frontShin: 0, bodyY: 1.12, bodyX: 0.05, batY: 2.3, batX: -0.15, batZ: -0.8 },
   },
 ];
 

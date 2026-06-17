@@ -215,7 +215,9 @@ function makeBat(dir: number): THREE.Group {
   tip.position.y = 1.14;
   bat.add(tip);
 
-  bat.rotation.z = dir * 0.5;
+  // cocked up over the back shoulder; matches the swing's t=0 rest pose so the
+  // bat doesn't pop when a swing starts (see SWING in GameScene)
+  bat.rotation.z = dir * -0.5;
   bat.rotation.x = 0.35;
   return bat;
 }
