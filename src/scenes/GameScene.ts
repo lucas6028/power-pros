@@ -330,9 +330,16 @@ export class GameScene implements Scene {
   private pitcherRestZ = WORLD.moundZ + 0.3;
   private batter3d: THREE.Group | null = null;
   private batterBat: THREE.Object3D | null = null;
+  private batterBatTip: THREE.Object3D | null = null;
   private batterBody: THREE.Object3D | null = null;
   private batterFrontLeg: THREE.Object3D | null = null;
   private batterFrontShin: THREE.Object3D | null = null;
+  // swing-arc swoosh: a ribbon swept between the hands and the barrel tip, traced
+  // through the contact part of the swing and faded out afterwards
+  private swingTrail!: THREE.Mesh;
+  private trailBase: THREE.Vector3[] = [];
+  private trailTip: THREE.Vector3[] = [];
+  private trailFade = 0;
   private charLayer = new THREE.Group();
   private hud!: Hud;
   private swingTicks = 0;
@@ -379,6 +386,25 @@ export class GameScene implements Scene {
     );
     this.aimRing.visible = false;
     this.scene3d.add(this.cursorRing, this.aimRing);
+
+    // swing-arc swoosh (built from the bat's path each swing; drawn on top so it
+    // reads clearly even where the bat passes behind the batter)
+    this.swingTrail = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        depthTest: false,
+        depthWrite: false,
+        vertexColors: true,
+      }),
+    );
+    this.swingTrail.renderOrder = 10;
+    this.swingTrail.frustumCulled = false;
+    this.swingTrail.visible = false;
+    this.scene3d.add(this.swingTrail);
 
     this.hud = new Hud(ctx.overlay);
 
@@ -515,11 +541,13 @@ export class GameScene implements Scene {
     this.batter3d.position.set(batsLeft ? WORLD.batterX : -WORLD.batterX, 0, WORLD.batterZ);
     const grabB = (n: string): THREE.Object3D | null => this.batter3d!.getObjectByName(n) ?? null;
     this.batterBat = grabB("bat");
+    this.batterBatTip = grabB("batTip");
     this.batterBody = grabB("body");
     this.batterFrontLeg = grabB("frontLeg");
     this.batterFrontShin = grabB("frontShin");
     this.charLayer.add(this.batter3d);
 
+    this.clearSwingTrail();
     this.swingTicks = 0;
     this.cursor = { x: 0, y: 0 }; // new batter starts with a centered cursor
     this.currentBatterId = this.batter.id;
@@ -576,6 +604,7 @@ export class GameScene implements Scene {
         break;
     }
     this.updateSwingAnimation();
+    this.updateSwingTrail();
     // after the release, the pitcher recovers from the follow-through to the set
     if (this.phase !== "windup") this.recoverPitcher();
   }
@@ -649,9 +678,11 @@ export class GameScene implements Scene {
    * through. Applies the keyframed SwingPose to the batter's rig. */
   private updateSwingAnimation(): void {
     if (this.swingTicks <= 0 || !this.batterBat) return;
+    if (this.swingTicks === SWING_TICKS) this.clearSwingTrail(); // first frame of a swing
     this.swingTicks -= 1;
     const dir = this.swingDir;
-    const p = swingPose(this.swingTicks === 0 ? 0 : 1 - this.swingTicks / SWING_TICKS);
+    const t = this.swingTicks === 0 ? 0 : 1 - this.swingTicks / SWING_TICKS;
+    const p = swingPose(t);
 
     if (this.batterFrontLeg) this.batterFrontLeg.rotation.x = p.frontLeg;
     if (this.batterFrontShin) this.batterFrontShin.rotation.x = p.frontShin;
@@ -662,6 +693,67 @@ export class GameScene implements Scene {
     this.batterBat.rotation.y = dir * p.batY;
     this.batterBat.rotation.x = p.batX;
     this.batterBat.rotation.z = dir * p.batZ;
+
+    // sample the bat's path through the contact part of the swing to draw the arc
+    if (t >= 0.3 && t <= 0.92 && this.batterBatTip && this.batter3d) {
+      this.batter3d.updateMatrixWorld(true);
+      this.trailBase.push(this.batterBat.getWorldPosition(new THREE.Vector3()));
+      this.trailTip.push(this.batterBatTip.getWorldPosition(new THREE.Vector3()));
+      this.rebuildSwingTrail();
+    }
+    if (this.swingTicks === 0) this.trailFade = 12; // begin fading the swoosh out
+  }
+
+  /** Rebuild the swoosh ribbon from the recorded barrel path: a strip of quads
+   * between the hands and the barrel tip, with a per-vertex alpha ramp so the
+   * tail of the arc is faint and the leading edge is bright. */
+  private rebuildSwingTrail(): void {
+    const n = this.trailTip.length;
+    if (n < 2) return;
+    const pos: number[] = [];
+    const col: number[] = [];
+    const push = (v: THREE.Vector3, a: number): void => {
+      pos.push(v.x, v.y, v.z);
+      col.push(1, 1, 1, a);
+    };
+    for (let i = 0; i < n - 1; i++) {
+      const a0 = (i / (n - 1)) ** 2; // older samples fade out faster
+      const a1 = ((i + 1) / (n - 1)) ** 2;
+      const b0 = this.trailBase[i]!;
+      const t0 = this.trailTip[i]!;
+      const b1 = this.trailBase[i + 1]!;
+      const t1 = this.trailTip[i + 1]!;
+      push(b0, a0);
+      push(t0, a0);
+      push(t1, a1);
+      push(b0, a0);
+      push(t1, a1);
+      push(b1, a1);
+    }
+    const geo = this.swingTrail.geometry;
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+    (this.swingTrail.material as THREE.MeshBasicMaterial).opacity = 0.6;
+    this.swingTrail.visible = true;
+  }
+
+  /** Fade the swoosh out after the swing finishes, then hide and reset it. */
+  private updateSwingTrail(): void {
+    if (this.trailFade <= 0) return;
+    this.trailFade -= 1;
+    const mat = this.swingTrail.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.6 * (this.trailFade / 12);
+    if (this.trailFade <= 0) this.clearSwingTrail();
+  }
+
+  private clearSwingTrail(): void {
+    this.trailBase = [];
+    this.trailTip = [];
+    this.trailFade = 0;
+    if (this.swingTrail) {
+      this.swingTrail.visible = false;
+      (this.swingTrail.material as THREE.MeshBasicMaterial).opacity = 0;
+    }
   }
 
   private updatePrepare(): void {
