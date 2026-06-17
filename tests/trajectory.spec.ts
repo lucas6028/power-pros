@@ -1,14 +1,16 @@
 import { test, expect } from "@playwright/test";
-import { boot, getState } from "./helpers";
+import { boot, getState, waitForScene } from "./helpers";
 
 interface Point {
   x: number;
   y: number;
 }
 
-/** Max deviation of a flight trace from a straight constant-speed flight
- * between its first and last point. Trace points are one per logic tick, so
- * the index is an exact time parameter. A straight pitch deviates ~0. */
+/** Max deviation of a flight trace from a straight constant-speed flight between
+ * its first and last point. The trace is recorded in WORLD coordinates (metres),
+ * one sample per logic tick, and the ball moves at constant world velocity, so
+ * the tick index is an exact time parameter — a straight (fastball) pitch
+ * deviates ~0 while breaking balls bow away in x and/or y. */
 function maxDeviation(trace: Point[]): { dx: number; dy: number } {
   const a = trace[0]!;
   const b = trace[trace.length - 1]!;
@@ -26,6 +28,7 @@ test("breaking balls curve, fastballs fly straight", async ({ page }) => {
   test.setTimeout(180_000);
   await boot(page);
   await page.evaluate(() => window.__game!.newGame("brothers", "dragons", 42));
+  await waitForScene(page, "game");
   await page.evaluate(() => window.__game!.setTimeScale(6));
 
   const byType = new Map<string, Point[]>();
@@ -53,16 +56,16 @@ test("breaking balls curve, fastballs fly straight", async ({ page }) => {
   const fb = byType.get("fastball");
   expect(fb, "should have observed a fastball").toBeTruthy();
   const fbDev = maxDeviation(fb!);
-  console.log("fastball deviation px:", fbDev);
+  console.log("fastball deviation (m):", fbDev);
   // fastballs fly true
-  expect(fbDev.dx).toBeLessThan(2);
-  expect(fbDev.dy).toBeLessThan(2);
+  expect(fbDev.dx).toBeLessThan(0.02);
+  expect(fbDev.dy).toBeLessThan(0.02);
 
   for (const [type, trace] of byType) {
     if (type === "fastball") continue;
     const dev = maxDeviation(trace);
-    console.log(`${type} deviation px:`, dev);
+    console.log(`${type} deviation (m):`, dev);
     // breaking balls visibly bend away from the straight path
-    expect(dev.dx + dev.dy).toBeGreaterThan(8);
+    expect(dev.dx + dev.dy).toBeGreaterThan(0.08);
   }
 });
