@@ -174,62 +174,86 @@ interface SwingPose {
   frontShin: number; // stride-leg knee bend
   bodyY: number; // trunk rotation (coil → open through the ball) ×dir
   bodyX: number; // trunk lean
-  batY: number; // bat sweep about vertical ×dir
-  batX: number; // bat tilt (cocked up → level through the zone)
-  batZ: number; // bat lay-back over the shoulder ×dir
+  // The barrel points along the bat's local +Y. With batX≈0 the Euler order makes
+  // batZ a "lay-down" (tilts the barrel off vertical, setting how LEVEL the swing
+  // plane is) and batY a pure azimuth — so batY sweeps the barrel horizontally
+  // around the body (the real swing), instead of chopping in the screen plane.
+  batY: number; // MAIN sweep: barrel azimuth about the vertical axis ×dir
+  batX: number; // small fore/aft tip of the swing plane (attack angle trim)
+  batZ: number; // lays the barrel down off vertical into the (near-level) swing plane ×dir
 }
 
 /** Key poses of the swing across normalized time t∈[0,1]: 抬腳 lift the stride
- * leg while 引棒 loading the hands back and coiling the trunk → stride the foot
- * down and start opening the hips → 轉身 rotate the body and 揮擊 whip the bat
- * level through the zone → follow-through wrapping around. */
+ * leg while 引棒 loading the hands back and coiling the trunk → stride down and
+ * lay the barrel into a flat plane → 轉身 rotate the trunk and 揮擊 SWEEP the bat
+ * LEVEL around the body through the zone → follow-through wrapping around.
+ *
+ * The barrel travels a near-horizontal arc (a rotational swing), not a vertical
+ * chop: batZ stays positive to keep the bat laid into a level plane while batY
+ * carries the big azimuth sweep. Through contact (t≈0.55–0.65) the barrel is
+ * roughly level (~20° up for a touch of uppercut) and points at the pitcher. */
 const SWING: { t: number; p: SwingPose }[] = [
+  // 構え: bat cocked up over the back shoulder (matches the idle rest pose)
   { t: 0, p: { frontLeg: 0, frontShin: 0, bodyY: 0, bodyX: 0, batY: 0, batX: 0.35, batZ: 0.5 } },
-  // 抬腳 + 引棒: front knee up, hands load back, the bat cocks high over the back
-  // shoulder (large batZ roll) so it has a long way to travel
+  // 抬腳 + 引棒: front knee up, hands load back, the barrel cocks a touch higher
+  // and further behind the back shoulder (batY winds back, batZ eases up)
   {
-    t: 0.24,
+    t: 0.22,
     p: {
       frontLeg: -0.7,
       frontShin: 0.6,
       bodyY: 0.34,
       bodyX: -0.06,
-      batY: 0.2,
-      batX: 0.55,
-      batZ: 1.15,
+      batY: 0.7,
+      batX: 0.1,
+      batZ: 0.45,
     },
   },
-  // stride down, hips begin to fire, the barrel starts dropping into the slot
+  // stride down, hips begin to fire, the barrel lays DOWN off vertical into a flat
+  // swing plane (batZ grows) — loaded to sweep, not to drop on the ball
   {
-    t: 0.42,
+    t: 0.4,
     p: {
       frontLeg: -0.1,
       frontShin: 0.1,
-      bodyY: -0.1,
-      bodyX: 0.0,
-      batY: 0.0,
-      batX: 0.25,
-      batZ: 0.2,
+      bodyY: 0.0,
+      bodyX: 0.02,
+      batY: 0.2,
+      batX: 0.05,
+      batZ: 0.95,
     },
   },
-  // 轉身 + 揮擊: trunk fully rotated and the bat WHIPS across the screen — batZ
-  // rolls hard through the zone (this is the axis that reads from behind)
+  // 轉身 + 揮擊: trunk rotates open and the barrel SWEEPS LEVEL around the body and
+  // through the zone — batY drives the horizontal arc, batZ keeps the plane flat
   {
-    t: 0.62,
+    t: 0.58,
     p: {
       frontLeg: 0.05,
       frontShin: 0,
-      bodyY: -0.72,
-      bodyX: 0.08,
-      batY: -0.35,
+      bodyY: -0.78,
+      bodyX: 0.1,
+      batY: -0.95,
       batX: -0.05,
-      batZ: -1.7,
+      batZ: 1.3,
     },
   },
-  // follow-through, the bat wraps all the way around to the other side
+  // 振り抜き: extension out front, the barrel keeps sweeping around still on-plane
+  {
+    t: 0.78,
+    p: {
+      frontLeg: 0.05,
+      frontShin: 0,
+      bodyY: -1.0,
+      bodyX: 0.06,
+      batY: -1.7,
+      batX: -0.1,
+      batZ: 1.15,
+    },
+  },
+  // follow-through: the bat wraps around to the far side and rises
   {
     t: 1.0,
-    p: { frontLeg: 0, frontShin: 0, bodyY: -0.98, bodyX: 0.05, batY: -0.7, batX: -0.2, batZ: -2.9 },
+    p: { frontLeg: 0, frontShin: 0, bodyY: -1.12, bodyX: 0.05, batY: -2.3, batX: -0.15, batZ: 0.8 },
   },
 ];
 
