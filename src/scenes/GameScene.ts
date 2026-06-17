@@ -70,23 +70,27 @@ const PITCH_NAMES: Record<PitchTypeId, string> = {
 /** One frame of the pitching delivery (all rotations in radians; armX rotates
  * the throwing arm about its shoulder, so the hand swings a vertical circle). */
 interface PitcherPose {
+  turn: number; // whole-body yaw: 0 faces the plate, −1.5 is side-on
   frontLeg: number; // lead-leg hip lift
   frontShin: number; // lead-leg knee bend
   backLeg: number; // drive-leg hip
   backShin: number; // drive-leg knee bend
   bodyX: number; // trunk lean (forward +)
-  bodyY: number; // trunk twist (coil −)
+  bodyY: number; // extra upper-body coil
   armX: number; // throwing arm: + back/down, − up/over-the-top
   strideZ: number; // step toward the plate (+Z)
   sink: number; // hip drop
 }
 
-/** Key poses of the delivery across normalized time t∈[0,1]:
- * set → leg lift / gather → stride & plant → arm whip over the top → release. */
+/** Key poses of the left-handed delivery across normalized time t∈[0,1]: face
+ * the plate → pivot side-on while lifting the lead (right) knee to the balance
+ * point → turn open toward the plate and stride → arm whips over the top →
+ * release. The body turn (turn) is what reads as 轉身. */
 const DELIVERY: { t: number; p: PitcherPose }[] = [
   {
     t: 0,
     p: {
+      turn: 0,
       frontLeg: 0,
       frontShin: 0,
       backLeg: 0,
@@ -99,56 +103,60 @@ const DELIVERY: { t: number; p: PitcherPose }[] = [
     },
   },
   {
-    t: 0.3,
+    t: 0.2,
     p: {
-      frontLeg: -1.5,
-      frontShin: 1.4,
+      turn: -1.2,
+      frontLeg: -1.0,
+      frontShin: 1.0,
       backLeg: 0,
-      backShin: 0.25,
-      bodyX: -0.12,
-      bodyY: -0.45,
-      armX: 0.5,
+      backShin: 0.2,
+      bodyX: -0.05,
+      bodyY: -0.1,
+      armX: 0.3,
       strideZ: 0,
       sink: 0.03,
     },
   },
   {
-    t: 0.5,
+    t: 0.42,
     p: {
-      frontLeg: -1.6,
-      frontShin: 1.5,
+      turn: -1.5,
+      frontLeg: -1.5,
+      frontShin: 1.4,
       backLeg: 0,
       backShin: 0.3,
-      bodyX: -0.15,
-      bodyY: -0.55,
-      armX: 0.3,
+      bodyX: -0.1,
+      bodyY: -0.2,
+      armX: 0.4,
       strideZ: 0.05,
-      sink: 0.04,
+      sink: 0.05,
     },
   },
   {
     t: 0.72,
     p: {
+      turn: -0.5,
       frontLeg: -0.4,
-      frontShin: 0.15,
+      frontShin: 0.2,
       backLeg: 0,
       backShin: 0.1,
-      bodyX: 0.0,
-      bodyY: -0.15,
+      bodyX: 0.05,
+      bodyY: -0.1,
       armX: -2.6,
-      strideZ: 0.55,
+      strideZ: 0.5,
       sink: 0.0,
     },
   },
   {
     t: 1.0,
     p: {
+      turn: 0.05,
       frontLeg: -0.45,
       frontShin: 0.0,
       backLeg: 0.9,
       backShin: 0.5,
-      bodyX: 0.32,
-      bodyY: 0.2,
+      bodyX: 0.3,
+      bodyY: 0.15,
       armX: -0.9,
       strideZ: 0.8,
       sink: 0.02,
@@ -171,17 +179,18 @@ function deliveryPose(t: number): PitcherPose {
   }
   const span = b.t - a.t || 1;
   const u = smoothstep(Math.max(0, Math.min(1, (t - a.t) / span)));
-  const mix = (x: number, y: number): number => x + (y - x) * u;
+  const mix = (k: keyof PitcherPose): number => a.p[k] + (b.p[k] - a.p[k]) * u;
   return {
-    frontLeg: mix(a.p.frontLeg, b.p.frontLeg),
-    frontShin: mix(a.p.frontShin, b.p.frontShin),
-    backLeg: mix(a.p.backLeg, b.p.backLeg),
-    backShin: mix(a.p.backShin, b.p.backShin),
-    bodyX: mix(a.p.bodyX, b.p.bodyX),
-    bodyY: mix(a.p.bodyY, b.p.bodyY),
-    armX: mix(a.p.armX, b.p.armX),
-    strideZ: mix(a.p.strideZ, b.p.strideZ),
-    sink: mix(a.p.sink, b.p.sink),
+    turn: mix("turn"),
+    frontLeg: mix("frontLeg"),
+    frontShin: mix("frontShin"),
+    backLeg: mix("backLeg"),
+    backShin: mix("backShin"),
+    bodyX: mix("bodyX"),
+    bodyY: mix("bodyY"),
+    armX: mix("armX"),
+    strideZ: mix("strideZ"),
+    sink: mix("sink"),
   };
 }
 
@@ -498,6 +507,8 @@ export class GameScene implements Scene {
     ease(this.pitcherBackLeg);
     ease(this.pitcherBackShin);
     if (this.pitcher3d) {
+      this.pitcher3d.rotation.y *= 0.85;
+      if (Math.abs(this.pitcher3d.rotation.y) < 0.01) this.pitcher3d.rotation.y = 0;
       this.pitcher3d.position.y += (PITCHER_BASE_Y - this.pitcher3d.position.y) * 0.15;
       this.pitcher3d.position.z += (this.pitcherRestZ - this.pitcher3d.position.z) * 0.15;
     }
@@ -530,6 +541,7 @@ export class GameScene implements Scene {
     }
     if (this.pitcherArm) this.pitcherArm.rotation.x = p.armX;
     if (this.pitcher3d) {
+      this.pitcher3d.rotation.y = p.turn; // side-on → square to the plate (轉身)
       this.pitcher3d.position.y = PITCHER_BASE_Y + p.sink;
       this.pitcher3d.position.z = this.pitcherRestZ + p.strideZ;
     }

@@ -187,16 +187,16 @@ export function makeChibiPitcher(colors: ChibiColors): THREE.Group {
   head.position.y = -hip; // re-base absolute head positions onto the hip pivot
   body.add(head);
 
-  // glove arm (static), on the figure's left
+  // glove arm (static), on the figure's right
   const glove = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.34, 6, 12), toon(SKIN));
-  glove.position.set(-0.4, 0.7 - hip, 0.04);
-  glove.rotation.z = 0.5;
+  glove.position.set(0.4, 0.7 - hip, 0.04);
+  glove.rotation.z = -0.5;
   body.add(glove);
 
-  // throwing arm: pivot at the right shoulder, hangs down at rest
+  // throwing arm (left-handed): pivot at the left shoulder, hangs down at rest
   const arm = new THREE.Group();
   arm.name = "arm";
-  arm.position.set(0.38, 0.92 - hip, 0);
+  arm.position.set(-0.38, 0.92 - hip, 0);
   const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.34, 6, 12), toon(SKIN));
   upper.position.set(0, -0.22, 0);
   arm.add(upper);
