@@ -15,7 +15,13 @@ is original, drawn in a similar chibi style (see `images/` for style references)
 ## Tech stack
 
 - **TypeScript** (strict mode) + **Vite** for build/dev
-- **PixiJS** for 2D rendering (characters are flat SVG/vector-style chibi sprites)
+- **PixiJS 8** for 2D menu/UI scenes (Title, TeamSelect, Result — flat vector-style
+  chibi sprites)
+- **Three.js** for the in-game 3D view (the pitch–bat duel): perspective camera
+  behind the batter; chibi figures + field built from primitives (toon shading +
+  inverted-hull outline for the bold chibi look)
+- The in-game **HUD is an HTML/CSS DOM overlay** over the WebGL canvas (zh-TW text
+  rendered by the browser, no WebGL fonts)
 - **Playwright** for testing: screenshot verification + scripted play sessions
 - Plain JSON for game data (teams, players, stats) — no backend, runs fully in browser
 - No framework for UI; game screens are managed by a simple scene/state machine
@@ -37,20 +43,40 @@ them to match.)
 
 ```
 src/
-  main.ts            # entry point, boots Pixi app + scene manager
-  scenes/            # one file per screen: Title, TeamSelect, Game, Result
-  game/              # pure game logic, NO rendering code
+  main.ts            # entry: boots Pixi app + ThreeStage; fixed-timestep loop; letterbox fit
+  scenes/            # scene.ts = SceneManager + Scene interface + GAME_W/H (960×540);
+                     #   Title / TeamSelect / Result = 2D Pixi, GameScene = 3D Three.js
+  game/              # pure game logic, NO rendering imports (no Pixi / Three)
     sim/             # at-bat simulation: pitch physics, contact, fielding
     state/           # match state machine (inning, outs, count, baserunners)
-  render/            # Pixi sprites, animations, field drawing
-  data/              # JSON: teams, players, stadiums
-  ui/                # menus, HUD, cursor/gamepad input
+  render/            # 2D Pixi: chibi.ts, text.ts · 3D Three.js: chibi3d.ts,
+                     #   field3d.ts, three-stage.ts (WebGL host + world→screen projection)
+  data/              # JSON teams/players + schema.ts (zod) + index.ts loader
+  ui/                # hud.ts (DOM overlay HUD), input.ts, debug.ts (dev __game API)
 images/              # art style references (Power Pros chibi look)
 ```
 
-Keep `game/` free of PixiJS imports — simulation must be testable headless.
-All gameplay logic should be deterministic given an RNG seed (seedable PRNG,
-never `Math.random()` inside `game/`).
+Keep `game/` free of rendering imports (PixiJS **and** Three.js) — simulation must
+be testable headless. All gameplay logic should be deterministic given an RNG seed
+(seedable PRNG, never `Math.random()` inside `game/`).
+
+## Rendering architecture
+
+Rendering is **hybrid**. A Pixi `Application` and a Three.js `WebGLRenderer`
+(wrapped by `render/three-stage.ts` as `ThreeStage`) share one letterboxed rect at a
+fixed **960×540** logical resolution (`GAME_W`/`GAME_H` in `scenes/scene.ts`). 2D
+menu scenes draw to the Pixi stage; `GameScene` calls `three.activate(scene, camera)`
+on enter and drives its own `render()` once per animation frame.
+
+- `scenes/scene.ts` owns `SceneManager`, the `Scene` interface (note the optional
+  `render?()` hook for 3D scenes), and `SceneContext` (`stage`, `three`, `overlay`,
+  `input`, `goTo`).
+- The HUD (`ui/hud.ts`) is an HTML/CSS overlay authored in the same 960×540 space and
+  CSS-scaled onto the canvas, so zh-TW text is rendered by the browser.
+- `ThreeStage.project()` maps world points to 960×540 pixel space so screenshot /
+  trajectory tests stay comparable to the old 2D renderer. World coords live in
+  `render/field3d.ts` (`WORLD`): home plate at the origin, pitcher toward −Z, camera
+  behind the batter.
 
 ## Game design pillars
 
