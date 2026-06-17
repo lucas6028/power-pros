@@ -467,14 +467,20 @@ export class GameScene implements Scene {
 
   // ---------------------------------------------------------------- helpers
 
-  private disposeScene(): void {
-    this.scene3d.traverse((o) => {
+  /** Free the geometries and materials under an object (shared toon ramp / shadow
+   * textures are not owned here, so material.dispose leaves them intact). */
+  private disposeObject(root: THREE.Object3D): void {
+    root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
       const mat = mesh.material;
       if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
       else if (mat) mat.dispose();
     });
+  }
+
+  private disposeScene(): void {
+    this.disposeObject(this.scene3d);
     this.scene3d.clear();
   }
 
@@ -561,6 +567,9 @@ export class GameScene implements Scene {
   }
 
   private rebuildCharacters(): void {
+    // free the previous batter/pitcher meshes (the detailed figures carry many
+    // more geometries/materials, so a 9-inning parade of batters would leak)
+    this.charLayer.children.forEach((c) => this.disposeObject(c));
     this.charLayer.clear();
 
     this.pitcher3d = makeChibiPitcher(this.hexColors(this.fieldingTeam));
